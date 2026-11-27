@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+deny() { echo "gh-ro: DENIED — $1: gh $ORIG" >&2; exit 3; }
+ORIG="$*"
+[ $# -ge 1 ] || deny "no subcommand"
+for a in "$@"; do
+  case "$a" in '&&'|'||'|';'|'|'|'>'|'>>'|'<'|'`'*|'$('*) deny "shell operator in argv ($a)";; esac
+done
+sub="$1"; shift
+case "$sub" in
+  pr)     case "${1:-}" in view|diff|checks|list|status) ;; *) deny "pr ${1:-} is not a read";; esac ;;
+  issue)  case "${1:-}" in view|list|status)             ;; *) deny "issue ${1:-} is not a read";; esac ;;
+  run)    case "${1:-}" in view|list)                    ;; *) deny "run ${1:-} is not a read";; esac ;;
+  search) case "${1:-}" in code|issues|prs|repos|commits) ;; *) deny "search ${1:-} is not allowed";; esac ;;
+  repo)   case "${1:-}" in view)                         ;; *) deny "repo ${1:-} is not a read";; esac ;;
+  auth)   case "${1:-}" in
+            status) [ $# -eq 1 ] || deny "auth status takes no arguments (--show-token/-t would print the token into worker output)";;
+            *) deny "auth ${1:-} is not a read";;
+          esac ;;
+  api)
+    python3 "$(dirname "$0")/gh_ro_api_check.py" "$@" || exit 3 ;;
+  *) deny "$sub is not an allowed read subcommand" ;;
+esac
+exec gh "$sub" "$@"

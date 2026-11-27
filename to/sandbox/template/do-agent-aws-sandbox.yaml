@@ -1,0 +1,171 @@
+# syntax=docker/sandbox-kit:3
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Docker Sandboxes (sbx) workload kit for the do-agent-aws harness.
+#
+# A kit is one OCI image: its layers are the harness root filesystem and this
+# descriptor rides in the image manifest (annotation
+# vnd.docker.sandbox.kit.descriptor). The descriptor is the workload's
+# permission request - compute, network egress, credentials - and the sandbox
+# runtime and its policy decide what is granted. Format: Docker Sandbox Kit
+# Specification v3 (github.com/docker/sandbox-kit-spec, docs/spec/SPEC-v3.md).
+#
+# to/sandbox/render.sh copies this file into to/sandbox/app/do-agent-aws-sandbox/
+# next to the generated do-agent-aws-sandbox.dockerfile (this repository's
+# Dockerfile followed by template/sandbox.dockerfile) and every source its
+# COPY and ADD lines name (Container-Root/, the docs the image serves).
+# See to/sandbox/README.md.
+schemaVersion: "3"
+kind: workload
+displayName: do-agent-aws harness
+description: >-
+  The do-agent-aws harness (Claude Code with the harness plugins, memory,
+  governance rules and UIs), built from this repository's Dockerfile, plus a
+  Docker Engine so the agent can build, run and test Docker Compose stacks
+  inside the sandbox microVM.
+sourceUrl: https://github.com/awslabs/do-agent-aws
+licenses: [Apache-2.0]
+version: "0.1.0"
+
+capabilities:
+  # The host launches the agent (the image ENTRYPOINT) under bash and honors
+  # the identity the image config declares. The harness image runs as the agent
+  # user; this kit's layer declares USER root for the Docker Engine inside the
+  # microVM; see to/sandbox/README.md "Identity".
+  - type: com.docker.sandbox/sbx@1
+
+  # Compute. 4 vCPU / 8 GiB is the cloud "medium" shape. Pass the same values
+  # with --cpus/--memory at create; a cloud create must name a billable shape.
+  - type: com.docker.sandbox/resources@1
+    config:
+      cpu: 4
+      memory: 8g
+
+  # Egress allowlist: the hosts the kit asks for while the agent runs. They are
+  # the only reachable hosts when the sandbox's policy defaults to deny
+  # (cloud: e2e.sh sets the sandbox's policy to deny-all; local: sbx policy
+  # init deny-all); under a broader policy the runtime adds these to what it
+  # already allows. Nothing is opened for an install phase (the image is built
+  # ahead of time, so the sandbox installs nothing at create).
+  - type: com.docker.sandbox/network-policy@1
+    config:
+      runtime:
+        allow:
+          # Model API for Claude Code: the Amazon Bedrock runtime of us-east-1,
+          # the region the image pins (AWS_REGION); the credential below is
+          # injected here. Not the Bedrock control plane, no other region, no
+          # other AWS service and no Anthropic host.
+          - bedrock-runtime.us-east-1.amazonaws.com:443
+          # Amazon ECR Public, for the image pulls of the Compose stacks the
+          # agent builds inside the sandbox (to/sandbox/example/compose-demo
+          # pulls public.ecr.aws/ubuntu/ubuntu:22.04 by digest): the registry
+          # and token service, and the blob CDN a pull is redirected to
+          # (observed from AWS on 2026-11-10). Docker Hub is not allowed.
+          # Residual risk: the registry also accepts pushes made with
+          # credentials a process brings itself (to/sandbox/README.md).
+          - public.ecr.aws:443
+          - d2glxqk2uabbnd.cloudfront.net:443
+
+  # The model credential, by service name only: a short-term Amazon Bedrock
+  # API key. sbx 0.47.0's built-in claude-bedrock agent reads STS credentials
+  # that the daemon writes (a sidecar file, through awsCredentialExport); for
+  # this kit, with the same credential shape, the daemon armed no STS
+  # refresher and wrote no sidecar, so this kit takes a bearer key instead
+  # (to/sandbox/README.md "Model credential"). The value
+  # is a sandbox-scoped dynamic secret on the host, never a file or the image:
+  # sbx runs to/sandbox/bedrock-token.sh, installed outside every sandbox
+  # mount, which prints a key made from the credentials of an AWS profile on
+  # the host (the instance role, on an EC2 host), and runs it again every 55
+  # minutes. Proxy managed: the sandbox sees only the sentinel
+  # "proxy-managed" in AWS_BEARER_TOKEN_BEDROCK, with which Claude Code
+  # authenticates, and the host-side proxy writes "Bearer <key>" into the
+  # Authorization header of every request to the one endpoint below,
+  # replacing whatever header the sandbox sent; the key never enters the
+  # sandbox. The endpoint pins the region (us-east-1, the image's
+  # AWS_REGION). AWS attributes the calls to the role whose credentials made
+  # the key: it needs bedrock:CallWithBearerToken besides InvokeModel and
+  # InvokeModelWithResponseStream on the models the image pins.
+  # Optional: without the secret and an approved binding the sandbox still
+  # starts, without a model credential (the harness's model test then skips
+  # itself).
+  - type: com.docker.sandbox/credential@1
+    optional: true
+    description: Amazon Bedrock API key for Claude Code, injected by the sandbox proxy
+    config:
+      service: bedrock
+      phase: runtime
+      apiKey:
+        name: AWS_BEARER_TOKEN_BEDROCK
+        proxyManaged: true
+        inject:
+          - domain: bedrock-runtime.us-east-1.amazonaws.com
+            header: Authorization
+            format: "Bearer %s"
+
+  # The image carries a Docker Engine and the com.docker.sandboxes.start-docker
+  # label, which asks the runtime to start dockerd. This startup hook is a
+  # fallback only: it gives the runtime's engine 15 seconds to answer and starts
+  # dockerd itself only when none does and no dockerd process exists. Should the
+  # two still race, the later dockerd exits at once on the held pid file
+  # (test4.sh checks that), so one engine serves. It cannot help where the
+  # sandbox lacks the privilege dockerd needs; e2e.sh's platform layer reports
+  # whether an engine answered.
+  - type: com.docker.sandbox/lifecycle@1
+    config:
+      startup:
+        - command:
+            - sh
+            - -c
+            - |
+              set -eu
+              for i in $(seq 1 15); do
+                if docker info >/dev/null 2>&1; then exit 0; fi
+                sleep 1
+              done
+              if ! pgrep -x dockerd >/dev/null 2>&1; then
+                dockerd >/var/log/dockerd.log 2>&1 &
+              fi
+          user: "0"
+          background: true
+          env: [HTTP_PROXY, HTTPS_PROXY, NO_PROXY, http_proxy, https_proxy, no_proxy]
+          description: Start the in-sandbox Docker Engine unless the runtime already did
+        # The whole harness platform at sandbox boot, so a fresh `sbx create`
+        # brings up what /startup.sh starts - the supervisor, the hub and the
+        # enabled spokes, and the harness UIs (UI_START=true in the image) -
+        # with no manual step. The repository Dockerfile's CMD is /startup.sh;
+        # the sandbox layer's ENTRYPOINT is claude (the interactive agent), so
+        # the platform cannot ride on CMD and runs from this hook instead.
+        # SBX_PLATFORM_AUTOSTART=false turns it off for a run that wants a
+        # platform-free VM: to/sandbox/test/e2e.sh runs the image's /test*.sh
+        # suite that way (./test.sh gives the suite its own throwaway /wd and
+        # memory home for the same reason) and then starts the platform itself
+        # in its own stack layer. Background, so boot does not wait on the
+        # keepalive loop; it sources the env file the image derives from the
+        # on-switch ENV, so /startup.sh sees them even if the hook does not
+        # inherit the image environment.
+        - command:
+            - sh
+            - -c
+            - |
+              set -u
+              if [ "${SBX_PLATFORM_AUTOSTART:-true}" = "false" ]; then
+                echo "platform autostart off (SBX_PLATFORM_AUTOSTART=false)"
+                exit 0
+              fi
+              if [ -f /etc/do-agent-aws-sandbox.env ]; then
+                . /etc/do-agent-aws-sandbox.env
+              fi
+              # Background and return, so boot does not wait on /startup.sh's
+              # keepalive loop (the dockerd hook backgrounds its daemon the same
+              # way); setsid detaches it so it survives this hook shell exiting.
+              setsid /startup.sh > /var/log/do-agent-aws-platform.log 2>&1 < /dev/null &
+          user: "0"
+          background: true
+          env: [SBX_PLATFORM_AUTOSTART, HTTP_PROXY, HTTPS_PROXY, NO_PROXY, http_proxy, https_proxy, no_proxy]
+          description: Start the do-agent-aws platform (/startup.sh) at boot unless SBX_PLATFORM_AUTOSTART=false
+
+  - type: com.docker.sandbox/agent-context@1
+    config:
+      filename: CLAUDE.md
+      contentFile: ./do-agent-aws-sandbox-context.md

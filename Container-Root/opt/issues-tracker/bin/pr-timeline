@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[ $# -ge 2 ] || { echo "usage: pr-timeline <owner/repo> <pr#> [limit]" >&2; exit 2; }
+OWNER="${1%%/*}"; NAME="${1##*/}"; PR="$2"; LIMIT="${3:-20}"
+[[ "$PR" =~ ^[0-9]+$ ]] || { echo "pr-timeline: PR number must be digits, got: $PR" >&2; exit 2; }
+[[ "$OWNER$NAME" != *@* ]] || { echo "pr-timeline: owner/name must not contain @" >&2; exit 2; }
+gh api graphql -f query='
+query($owner:String!, $name:String!, $num:Int!) {
+  repository(owner:$owner, name:$name) {
+    pullRequest(number:$num) {
+      reviews(last:50) { nodes { state submittedAt author{login} body } }
+      reviewThreads(last:50) {
+        nodes {
+          isResolved isOutdated path line
+          comments(last:10) { nodes { createdAt author{login} body } }
+        }
+      }
+      comments(last:50) { nodes { createdAt author{login} body } }
+    }
+  }
+}' -f owner="$OWNER" -f name="$NAME" -F num="$PR" \
+| jq -r --argjson limit "$LIMIT" '
+  .data.repository.pullRequest as $pr
+  | [
+      ($pr.reviews.nodes       | map({t:.submittedAt, kind:"review",  who:.author.login, where:.state, body:(.body // "")})),
+      ($pr.reviewThreads.nodes | map(
+          . as $th | .comments.nodes
+          | map({
+              t:.createdAt,
+              kind:(if $th.isResolved then "thread✓" else "thread" end),
+              who:.author.login,
+              where:($th.path + ":" + (($th.line // "?")|tostring) + (if $th.isOutdated then " [outdated]" else "" end)),
+              body:(.body // "")
+            })
+        ) | add // []),
+      ($pr.comments.nodes      | map({t:.createdAt, kind:"comment", who:.author.login, where:"", body:(.body // "")}))
+    ]
+  | add | sort_by(.t) | reverse | .[0:$limit]
+  | .[] | "\(.t[0:16])  \(.kind|.[0:7])  \(.who|.[0:18])  \(.where|.[0:45])\n    \((.body|gsub("\r?\n";" "))[0:140])\n"
+'

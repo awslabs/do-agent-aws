@@ -1,0 +1,100 @@
+diff --git a/packages/web-core/src/pages/kanban/GoalDescriptionDisclosure.tsx b/packages/web-core/src/pages/kanban/GoalDescriptionDisclosure.tsx
+new file mode 100644
+index 0000000..f90c471
+--- /dev/null
++++ b/packages/web-core/src/pages/kanban/GoalDescriptionDisclosure.tsx
+@@ -0,0 +1,62 @@
++import { useState, type ComponentProps } from 'react';
++import WYSIWYGEditor from '@/shared/components/WYSIWYGEditor';
++import { MarkdownPreview } from '@/shared/components/MarkdownPreview';
++
++// do-agent-aws Goals board (kanban/patches/0007): a goal card's description can hold a concise summary, then a line
++// that is exactly "## Full instructions", then the goal's full instructions (the goals file's projection writes it
++// so). The panel shows the summary with a labelled toggle; showing the full instructions, or clicking to edit, opens
++// the whole description in the editor, so an edit always saves the full text. A description without that line is
++// the plain editor, as before.
++const MARKER = /^## Full instructions[ \t]*$/m;
++
++type EditorProps = ComponentProps<typeof WYSIWYGEditor>;
++
++export function GoalDescriptionDisclosure(props: EditorProps) {
++  const [expanded, setExpanded] = useState(false);
++  const value = typeof props.value === 'string' ? props.value : '';
++  const match = MARKER.exec(value);
++  if (!match) {
++    return <WYSIWYGEditor {...props} />;
++  }
++  const toggle = (
++    <button
++      type="button"
++      className="mb-half text-sm text-brand hover:underline"
++      aria-expanded={expanded}
++      data-testid="full-instructions-toggle"
++      onClick={() => setExpanded(!expanded)}
++    >
++      {expanded ? 'Hide full instructions' : 'Show full instructions'}
++    </button>
++  );
++  if (expanded) {
++    return (
++      <div>
++        {toggle}
++        <WYSIWYGEditor {...props} />
++      </div>
++    );
++  }
++  const summary = value.slice(0, match.index).trimEnd();
++  return (
++    <div>
++      <div
++        role="button"
++        tabIndex={0}
++        data-testid="goal-summary"
++        onClick={() => setExpanded(true)}
++        onKeyDown={(e) => {
++          if (e.key === 'Enter') setExpanded(true);
++        }}
++      >
++        <MarkdownPreview
++          content={summary}
++          theme={
++            document.documentElement.classList.contains('dark') ? 'dark' : 'light'
++          }
++        />
++      </div>
++      {toggle}
++    </div>
++  );
++}
+diff --git a/packages/web-core/src/pages/kanban/KanbanIssuePanelContainer.tsx b/packages/web-core/src/pages/kanban/KanbanIssuePanelContainer.tsx
+index 41f8133..1b185c5 100644
+--- a/packages/web-core/src/pages/kanban/KanbanIssuePanelContainer.tsx
++++ b/packages/web-core/src/pages/kanban/KanbanIssuePanelContainer.tsx
+@@ -15,6 +15,7 @@ import { useProjectContext } from '@/shared/hooks/useProjectContext';
+ import { useOrgContext } from '@/shared/hooks/useOrgContext';
+ import { useProjectWorkspaceCreateDraft } from '@/shared/hooks/useProjectWorkspaceCreateDraft';
+ import WYSIWYGEditor from '@/shared/components/WYSIWYGEditor';
++import { GoalDescriptionDisclosure } from './GoalDescriptionDisclosure';
+ import { SearchableTagDropdownContainer } from '@/shared/components/SearchableTagDropdownContainer';
+ import { IssueCommentsSectionContainer } from './IssueCommentsSectionContainer';
+ import { IssueSubIssuesSectionContainer } from './IssueSubIssuesSectionContainer';
+@@ -1093,9 +1094,16 @@ export function KanbanIssuePanelContainer({
+       isUploading={isUploading}
+       attachmentError={uploadError}
+       onDismissAttachmentError={clearUploadError}
+-      renderDescriptionEditor={(props) => (
+-        <WYSIWYGEditor {...props} localAttachments={localAttachments} />
+-      )}
++      renderDescriptionEditor={(props) =>
++        mode === 'edit' ? (
++          <GoalDescriptionDisclosure
++            {...props}
++            localAttachments={localAttachments}
++          />
++        ) : (
++          <WYSIWYGEditor {...props} localAttachments={localAttachments} />
++        )
++      }
+       renderWorkspacesSection={(issueId) => (
+         <IssueWorkspacesSectionContainer issueId={issueId} />
+       )}

@@ -1,0 +1,131 @@
+diff --git a/packages/remote-web/src/app/layout/RemoteAppShell.tsx b/packages/remote-web/src/app/layout/RemoteAppShell.tsx
+index 34e8475..43be6a6 100644
+--- a/packages/remote-web/src/app/layout/RemoteAppShell.tsx
++++ b/packages/remote-web/src/app/layout/RemoteAppShell.tsx
+@@ -36,6 +36,7 @@ import {
+   type CreateRemoteProjectResult,
+ } from "@/shared/dialogs/org/CreateRemoteProjectDialog";
+ import { CloudShutdownExportBanner } from "@/shared/components/CloudShutdownExportBanner";
++import { DO_AGENT_AWS_HARNESS_MODE } from "@/shared/lib/harnessMode";
+ 
+ interface RemoteAppShellProps {
+   children: ReactNode;
+@@ -260,7 +261,12 @@ export function RemoteAppShell({ children }: RemoteAppShellProps) {
+           <AppBar
+             projects={projects}
+             hosts={relayHosts}
+-            onPairHostClick={isSignedIn ? handlePairHostClick : undefined}
++            onPairHostClick={
++              isSignedIn && !DO_AGENT_AWS_HARNESS_MODE
++                ? handlePairHostClick
++                : undefined
++            }
++            showCommunityLinks={!DO_AGENT_AWS_HARNESS_MODE}
+             activeHostId={activeHostId}
+             onCreateProject={handleCreateProject}
+             onWorkspacesClick={handleWorkspacesClick}
+diff --git a/packages/ui/src/components/AppBar.tsx b/packages/ui/src/components/AppBar.tsx
+index 5439af6..d677d0e 100644
+--- a/packages/ui/src/components/AppBar.tsx
++++ b/packages/ui/src/components/AppBar.tsx
+@@ -53,6 +53,7 @@ interface AppBarProps {
+   onWorkspacesClick: () => void;
+   onHostClick?: (hostId: string, status: AppBarHostStatus) => void;
+   showWorkspacesButton?: boolean;
++  showCommunityLinks?: boolean;
+   onProjectClick: (projectId: string) => void;
+   onProjectsDragEnd: (result: DropResult) => void;
+   isSavingProjectOrder?: boolean;
+@@ -205,6 +206,7 @@ export function AppBar({
+   onWorkspacesClick,
+   onHostClick,
+   showWorkspacesButton = true,
++  showCommunityLinks = true,
+   onProjectClick,
+   onProjectsDragEnd,
+   isSavingProjectOrder,
+@@ -537,27 +539,31 @@ export function AppBar({
+       <div className="mt-auto pt-base flex flex-col items-center gap-4">
+         {notificationBell}
+         {userPopover}
+-        <AppBarSocialLink
+-          href="https://github.com/BloopAI/vibe-kanban"
+-          label="Star on GitHub"
+-          iconPath={githubIconPath}
+-          badge={
+-            starCount != null && (
+-              <>
+-                <StarIcon size={10} weight="fill" />
+-                {formatStarCount(starCount)}
+-              </>
+-            )
+-          }
+-        />
+-        <AppBarSocialLink
+-          href="https://discord.gg/AC4nwVtJM3"
+-          label="Join our Discord"
+-          iconPath={discordIconPath}
+-          badge={
+-            onlineCount != null && (onlineCount > 999 ? '999+' : onlineCount)
+-          }
+-        />
++        {showCommunityLinks && (
++          <>
++            <AppBarSocialLink
++              href="https://github.com/BloopAI/vibe-kanban"
++              label="Star on GitHub"
++              iconPath={githubIconPath}
++              badge={
++                starCount != null && (
++                  <>
++                    <StarIcon size={10} weight="fill" />
++                    {formatStarCount(starCount)}
++                  </>
++                )
++              }
++            />
++            <AppBarSocialLink
++              href="https://discord.gg/AC4nwVtJM3"
++              label="Join our Discord"
++              iconPath={discordIconPath}
++              badge={
++                onlineCount != null && (onlineCount > 999 ? '999+' : onlineCount)
++              }
++            />
++          </>
++        )}
+         {updateVersion ? (
+           <Tooltip content={`Update to v${updateVersion}`} side="right">
+             <button
+diff --git a/packages/web-core/src/shared/actions/index.ts b/packages/web-core/src/shared/actions/index.ts
+index 4554f43..9e8237e 100644
+--- a/packages/web-core/src/shared/actions/index.ts
++++ b/packages/web-core/src/shared/actions/index.ts
+@@ -96,6 +96,7 @@ import type {
+   NavbarItem,
+ } from '@/shared/types/actions';
+ import { ActionTargetType, NavbarDivider } from '@/shared/types/actions';
++import { DO_AGENT_AWS_HARNESS_MODE } from '@/shared/lib/harnessMode';
+ 
+ async function resolveLinkedIssue(
+   workspaceId: string,
+@@ -483,6 +484,7 @@ export const Actions = {
+     label: 'Give Feedback',
+     icon: MegaphoneIcon,
+     requiresTarget: ActionTargetType.NONE,
++    isVisible: () => !DO_AGENT_AWS_HARNESS_MODE,
+     execute: () => {
+       posthog.displaySurvey('019bb6e8-3d36-0000-1806-7330cd3c727e');
+     },
+diff --git a/packages/web-core/src/shared/lib/harnessMode.ts b/packages/web-core/src/shared/lib/harnessMode.ts
+new file mode 100644
+index 0000000..e29673c
+--- /dev/null
++++ b/packages/web-core/src/shared/lib/harnessMode.ts
+@@ -0,0 +1,6 @@
++// do-agent-aws Goals board (kanban/patches/0006): this fork's build is the do-agent-aws harness's board, and harness
++// mode is on in it. It hides vibe-kanban's community and remote-service entry points: the GitHub star and Discord
++// links and Pair a remote device in the app bar, and Give Feedback. Machine settings stay. A build with
++// VITE_DO_AGENT_AWS_HARNESS=off shows them again.
++export const DO_AGENT_AWS_HARNESS_MODE =
++  import.meta.env.VITE_DO_AGENT_AWS_HARNESS !== 'off';

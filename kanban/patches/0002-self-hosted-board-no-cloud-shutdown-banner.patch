@@ -1,0 +1,16 @@
+diff --git a/packages/remote-web/src/app/layout/RemoteAppShell.tsx b/packages/remote-web/src/app/layout/RemoteAppShell.tsx
+index 91abafc..34e8475 100644
+--- a/packages/remote-web/src/app/layout/RemoteAppShell.tsx
++++ b/packages/remote-web/src/app/layout/RemoteAppShell.tsx
+@@ -59,8 +59,9 @@ export function RemoteAppShell({ children }: RemoteAppShellProps) {
+   const isWorkspaceContextRoute = location.pathname.includes("/workspaces");
+   const isProjectRoute = /^\/projects\/[^/]+/.test(location.pathname);
+   const isExportRoute = location.pathname === "/export";
+-  const showCloudShutdownBanner =
+-    isExportRoute || (isSignedIn && isProjectRoute);
++  // do-agent-aws self-hosted board: the vibe-kanban cloud's shutdown notice is not about this board, so it shows
++  // on the export page only (kanban/patches/0002)
++  const showCloudShutdownBanner = isExportRoute;
+ 
+   useCommandBarShortcut(
+     () => CommandBarDialog.show(),

@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SITE_FILE="${SHIPPED_TREE_DENYLIST_FILE:-$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)/scripts/test_shipped_tree.local.conf}"
+site_value() { [ -f "$SITE_FILE" ] && sed -n "s/^$1=\"\\(.*\\)\"[[:space:]]*\$/\\1/p" "$SITE_FILE" | head -1; }
+PAT_PINGS=$(site_value AUDIT_PINGS || true);    PAT_PINGS=${PAT_PINGS:-'(close|closing)[^.]{0,80}[0-9]+ ?days|[0-9]+ ?days[^.]{0,80}(close|closing)'}
+PAT_CLOSERS=$(site_value AUDIT_CLOSERS || true); PAT_CLOSERS=${PAT_CLOSERS:-'(close|closing|closed)[^.]{0,40}(in|after|within) [0-9]+ ?(days|weeks)'}
+PAT_EXTRA_A=$(site_value AUDIT_EXTRA_A || true);   PAT_EXTRA_A=${PAT_EXTRA_A:-}
+PAT_EXTRA_B=$(site_value AUDIT_EXTRA_B || true);     PAT_EXTRA_B=${PAT_EXTRA_B:-}
+PAT_GENERIC=$(site_value AUDIT_GENERIC_PINGS || true); PAT_GENERIC=${PAT_GENERIC:-}
+PAT_ATTRIB=$(site_value AUDIT_ATTRIBUTION || true); PAT_ATTRIB=${PAT_ATTRIB:-}
+PAT_AUTOMATION=$(site_value AUDIT_AUTOMATION || true); PAT_AUTOMATION=${PAT_AUTOMATION:-}
+PAT_DELETE=$(site_value AUDIT_DELETE || true);   PAT_DELETE=${PAT_DELETE:-$PAT_PINGS}
+
+USER="${ISSUES_GH_LOGIN:-$(gh api user --jq .login 2>/dev/null)}"
+SINCE=""
+DAYS=30
+DELETE=0
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --user)         USER="$2"; shift 2 ;;
+        --since)        SINCE="$2"; shift 2 ;;
+        --days)         DAYS="$2"; shift 2 ;;
+        --delete-noise) DELETE=1; shift ;;
+        -h|--help)      echo "usage: gh-comment-audit [--days N | --since YYYY-MM-DD] [--user LOGIN] [--delete-noise]"; exit 0 ;;
+        *) echo "unknown arg: $1" >&2; exit 2 ;;
+    esac
+done
+
+if [ -z "$SINCE" ]; then
+    SINCE=$(date -u -d "$DAYS days ago" +%Y-%m-%d 2>/dev/null || date -u -v-"${DAYS}"d +%Y-%m-%d)
+fi
+
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+
+echo "scanning items where $USER has commented..." >&2
+> "$WORK/items.txt"
+for state in open closed; do
+    for type in pr issue; do
+        PAGE=1
+        while true; do
+            RESULT=$(gh api "search/issues?q=commenter:$USER+is:$type+is:$state&per_page=100&page=$PAGE" \
+                       --jq '.items[] | "\(.repository_url | split("/")[-2:] | join("/")) \(.number)"' 2>/dev/null)
+            [ -z "$RESULT" ] && break
+            echo "$RESULT" >> "$WORK/items.txt"
+            COUNT=$(echo "$RESULT" | wc -l)
+            [ "$COUNT" -lt 100 ] && break
+            PAGE=$((PAGE + 1))
+            [ $PAGE -gt 10 ] && break
+        done
+    done
+done
+sort -u "$WORK/items.txt" > "$WORK/items-uniq.txt"
+ITEMS=$(wc -l < "$WORK/items-uniq.txt")
+echo "  → $ITEMS unique items" >&2
+
+echo "fetching comments since $SINCE..." >&2
+> "$WORK/comments.tsv"
+COUNT=0
+while read -r repo num; do
+    (
+        gh api "repos/$repo/issues/$num/comments?per_page=100" 2>/dev/null \
+          | jq -r --arg user "$USER" --arg repo "$repo" --arg num "$num" --arg since "$SINCE" '
+              .[]
+              | select(.user.login == $user)
+              | select(.created_at > $since)
+              | "\(.created_at[0:16])\t\($repo)#\($num)\t\(.id)\t\(.html_url)\t\(.body | gsub("\\n"; " ")[0:300])"
+            '
+    ) >> "$WORK/comments.tsv" &
+    COUNT=$((COUNT + 1))
+    if [ $((COUNT % 30)) -eq 0 ]; then wait; fi
+done < "$WORK/items-uniq.txt"
+wait
+
+TOTAL=$(wc -l < "$WORK/comments.tsv")
+sort -r "$WORK/comments.tsv" > "$WORK/sorted.tsv"
+
+grep -vE $'\t'"$USER/" "$WORK/sorted.tsv" > "$WORK/external.tsv" || true
+grep -E  $'\t'"$USER/" "$WORK/sorted.tsv" > "$WORK/owned.tsv"    || true
+EXT=$(wc -l < "$WORK/external.tsv")
+OWN=$(wc -l < "$WORK/owned.tsv")
+
+cat <<EOF
+
+=========================================================================
+ gh-comment-audit v2  —  $USER  —  since $SINCE
+=========================================================================
+ Total comments posted:  $TOTAL  (external: $EXT  /  owned-repos: $OWN)
+ Items scanned:          $ITEMS
+=========================================================================
+
+EOF
+
+flag() {
+    local label="$1" pattern="$2" file="${3:-$WORK/sorted.tsv}"
+    local count
+    if [ -z "$pattern" ]; then printf "  %-48s %3s\n" "$label" "-"; return; fi
+    count=$(grep -ciE "$pattern" "$file" 2>/dev/null || true)
+    count=${count:-0}
+    printf "  %-48s %3d\n" "$label" "$count"
+    if [ "$count" -gt 0 ] && [ "$count" -le 5 ]; then
+        grep -iE "$pattern" "$file" \
+          | awk -F'\t' '{print "      " $1 "  " $2 "\n        " $4 "\n        " substr($5,1,120) "\n"}'
+    elif [ "$count" -gt 5 ]; then
+        echo "      (>5 hits — review with: grep -iE '"$pattern"' $file)"
+    fi
+}
+
+echo "═══ EXTERNAL REPOS ═══"
+flag "AUDIT_PINGS"              "$PAT_PINGS" "$WORK/external.tsv"
+flag "AUDIT_CLOSERS"            "$PAT_CLOSERS" "$WORK/external.tsv"
+flag "AUDIT_AUTOMATION"         "$PAT_AUTOMATION" "$WORK/external.tsv"
+echo ""
+
+echo "═══ OWNED REPOS ═══"
+flag "AUDIT_PINGS"              "$PAT_PINGS" "$WORK/owned.tsv"
+flag "AUDIT_CLOSERS"            "$PAT_CLOSERS" "$WORK/owned.tsv"
+echo ""
+
+echo "═══ EXTERNAL REPOS, OTHER PATTERNS ═══"
+flag "AUDIT_EXTRA_A"             "$PAT_EXTRA_A" "$WORK/external.tsv"
+flag "AUDIT_EXTRA_B"              "$PAT_EXTRA_B" "$WORK/external.tsv"
+flag "AUDIT_ATTRIBUTION"        "$PAT_ATTRIB" "$WORK/external.tsv"
+echo ""
+
+echo "═══ EXTERNAL REPOS, BORDERLINE ═══"
+flag "AUDIT_GENERIC_PINGS"      "$PAT_GENERIC" "$WORK/external.tsv"
+
+LONG_EXT=$(awk -F'\t' 'length($5) > 250' "$WORK/external.tsv" | wc -l)
+printf "  %-48s %3d\n" "Long external comments (>250 chars)" "$LONG_EXT"
+echo ""
+
+echo "═══ DISTRIBUTION ═══"
+echo "  By date:"
+cut -f1 "$WORK/sorted.tsv" | cut -c1-10 | sort | uniq -c | tail -15 | sed 's/^/    /'
+echo ""
+echo "  Top external repos:"
+cut -f2 "$WORK/external.tsv" | sed 's/#.*//' | sort | uniq -c | sort -rn | head -10 | sed 's/^/    /'
+
+if [ "$DELETE" = "1" ]; then
+    NOISE=$(grep -cE "$PAT_DELETE" "$WORK/sorted.tsv" 2>/dev/null || echo 0)
+    if [ "$NOISE" -gt 0 ]; then
+        echo ""
+        echo "═══ DELETE-NOISE MODE ═══"
+        echo "Found $NOISE comments matching the delete pattern (AUDIT_DELETE in the site file, else AUDIT_PINGS)."
+        echo "These will be DELETED via gh api -X DELETE. Type 'YES' to proceed:"
+        read -r CONFIRM
+        if [ "$CONFIRM" = "YES" ]; then
+            grep -E "$PAT_DELETE" "$WORK/sorted.tsv" \
+              | while IFS=$'\t' read -r ts prspec id url body; do
+                  repo="${prspec%#*}"
+                  if gh api -X DELETE "repos/$repo/issues/comments/$id" --silent 2>/dev/null; then
+                      echo "  ✓ deleted $prspec id=$id"
+                  else
+                      echo "  ✗ FAILED  $prspec id=$id"
+                  fi
+                done
+        else
+            echo "  cancelled."
+        fi
+    fi
+fi
+
+KEEP="${HOME}/.local/share/gh-comment-audit"
+mkdir -p "$KEEP"
+DATE=$(date +%Y-%m-%dT%H%M)
+cp "$WORK/sorted.tsv" "$KEEP/$USER-$DATE.tsv"
+echo ""
+echo "Saved: $KEEP/$USER-$DATE.tsv"

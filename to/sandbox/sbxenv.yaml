@@ -1,0 +1,52 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+# Docker Sandboxes environment for the do-agent-aws harness (sbx env is
+# experimental; the format may change). The declarative form of what
+# to/sandbox/test/e2e.sh passes as flags: the workload kit, its compute, and
+# the approval for the proxy to use the stored Amazon Bedrock API key - by
+# service name and domain only; the value stays in the sbx secret store, as a
+# sandbox-scoped command secret set beforehand (to/sandbox/README.md "Model
+# credential").
+#
+# On a host with KVM, from the repository root, under a new sandbox name each
+# time, with its bedrock secret set first (to/sandbox/README.md "Local
+# sandboxes"): sbx 0.47.0 gives a sandbox re-created under a name it served
+# before no model key ("A new name for each sandbox"):
+#   N=do-agent-aws-$(date -u +%Y%m%dt%H%M%S)
+#   sbx env plan --name "$N" to/sandbox     # print the plan; changes nothing
+#   sbx env run --name "$N" to/sandbox      # create (or attach to) the sandbox
+#   sbx env rm --name "$N" to/sandbox       # remove the sandbox and its scoped resources
+# The same file works with --cloud from a host that can build the kit (the kit
+# is built from source in a local builder sandbox, which needs KVM); see
+# to/sandbox/README.md for the cloud path from a host without KVM.
+schemaVersion: "1"
+# Used only without --name, and then the same name every time (see above).
+name: do-agent-aws
+# The handle sbx derives from the kit reference below (its directory name).
+agent: do-agent-aws-sandbox
+kits:
+  - ./app/do-agent-aws-sandbox
+
+# No workspace: nothing from the host is mounted, as in the cloud.
+
+sandboxOptions:
+  cpus: 4
+  memory: 8g
+
+# Approves the kit's credential request: the proxy may inject the stored
+# bedrock API key into requests to bedrock-runtime.us-east-1.amazonaws.com.
+# Not the key itself.
+bindings:
+  bedrock:
+    apiKey:
+      domains:
+        - bedrock-runtime.us-east-1.amazonaws.com
+
+# Runs on this host before create/run: renders ./app/do-agent-aws-sandbox from
+# the repository (the kit source above).
+lifecycle:
+  initialize:
+    - name: Render the sandbox kit
+      command: ./render.sh
+      workdir: ${{ env.fileDir }}
+      timeout: 2m

@@ -1,0 +1,51 @@
+# Example goals file for the autonomy loop
+
+This is a working example of the goals file the autonomy loop fires against
+(see docs/manual/autonomy.md "Autonomy loop"). To try it:
+
+1. Copy it to the live goals path: `cp docs/loop/GOALS.md.example wd/goals/GOALS.md` in the
+   project directory. The loop reads the file named by `AUTONOMY_LOOP_GOALS` (default
+   `/wd/goals/GOALS.md`; `run.sh` mounts the project's `wd/` folder at `/wd`). With Slack
+   configured (`SLACK_BOT_TOKEN` and `SLACK_CHANNELS` set) this file is optional: a goal stated
+   in a Slack message is added by the chat responder (`/agent/goals-add.sh`) under a heading
+   `## Goals from Slack` as a checkbox line `- [ ] <goal> (from Slack <channel> <ts>)`, creating
+   the file when it is missing, and the loop fires on it from its next cycle; mark such an item
+   done by changing `- [ ]` to `- [x]`. (With the chat responder off, the loop's own fires create
+   the file from `/agent/goals-default.md` instead - docs/manual/channels.md "Slack connectivity".)
+2. Start the loop: with Slack configured it starts with the container (`AUTONOMY_LOOP=auto`, the
+   shipped default); without Slack set `AUTONOMY_LOOP=true` in `.env` and `./run.sh` - or, in a
+   running container, run one fire in the foreground with `docker exec do-agent-aws /agent/loop-once.sh`.
+
+How the loop consumes this file: each fire reads the goals plus the progress notes
+`/wd/loop/notes.md`, completes the **single smallest unfinished increment**, appends a
+one-line progress note, and stops. Progress accumulates across fires through the notes
+file. When a goal's DONE condition holds, mark it done in the goals file: `- [x]`, or `[x]` in
+its `## Goal` heading (`## Goal 1 - hello file [x]`) - the fire prompt says the same, and the
+kanban board then moves that goal's card to Done (docs/manual/boards.md "Kanban board"). When every goal is
+complete the agent creates the stop flag `/wd/loop/STOP`, which halts the loop.
+
+Writing your own goals: state an **outcome with a DONE condition that can be checked** - a
+file or command result that is missing if the work was not done - not an activity. "Improve
+the documentation" can never terminate the loop; "`/wd/demo/hello.md` exists with line X"
+can. The demo goals below are deliberately harmless: they only create files under `/wd` and
+need no network, credentials, or cluster access.
+
+## Goal 1 - hello file
+
+Create `/wd/demo/hello.md` containing exactly one line:
+`Hello from the do-agent-aws autonomy loop.`
+
+DONE when: `/wd/demo/hello.md` exists with that single line.
+
+## Goal 2 - workspace inventory
+
+Write `/wd/demo/inventory.md` listing the files and directories currently under `/wd`, one
+per line. Regenerating it on a later fire is fine; it just has to reflect `/wd`.
+
+DONE when: `/wd/demo/inventory.md` exists and lists the contents of `/wd`.
+
+## Completion
+
+When both goals above meet their DONE conditions, create the stop flag `/wd/loop/STOP`
+(`touch /wd/loop/STOP`) and end. Do not invent further work - creating the STOP flag is
+the final increment.

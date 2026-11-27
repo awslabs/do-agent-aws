@@ -1,0 +1,12 @@
+{
+  "executors": {
+    "CLAUDE_CODE": {
+      "DEFAULT": {
+        "CLAUDE_CODE": {
+          "base_command_override": "claude",
+          "dangerously_skip_permissions": false
+        }
+      }
+    }
+  }
+}

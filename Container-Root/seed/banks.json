@@ -1,0 +1,10 @@
+{
+  "harness-knowledge": {
+    "name": "Harness knowledge",
+    "mission": "Durable, general operating knowledge for an agent running in the do-agent-aws harness: AWS services as an agent uses them (EC2 and IMDS, IAM least privilege, S3, EKS and kubectl, Amazon Bedrock access and inference profiles, CloudWatch, service quotas, Spot and capacity reservations), Docker and containers, Claude Code agent operations (context, permissions, hooks, plugins, tmux-driven sessions, MCP), git and pull-request hygiene, and this harness's own conventions (the single home port behind an SSH tunnel, state under /wd, the shared agent tmux session, the loop and Slack gates, the memory banks). Retain facts as checkable statements; when asked, answer with the fact, how to verify it, and the harness convention that applies."
+  },
+  "loglearner-rules": {
+    "name": "LogLearner rules",
+    "mission": "Starter anti-regression rules for coding agents, in the LogLearner style: a rule, the kind of evidence that supports it, and a confidence. They guard against false success claims, repeated identical attempts, acting past a stop, inherited status, empty scans read as clean, and deleted evidence. Retain each as a rule to apply before claiming a result; when asked, answer with the rule and the concrete check it demands."
+  }
+}

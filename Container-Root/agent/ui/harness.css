@@ -1,0 +1,152 @@
+/* Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. */
+/* SPDX-License-Identifier: Apache-2.0 */
+/* do-agent-aws harness - the one stylesheet for every page this harness builds itself (docs/UI-STYLE.md). Served
+   same-origin at /__harness/harness.css on every host the home proxy answers (home-render.sh), so a page on any
+   *.localhost route loads it under a 'self' policy. Every rule is anchored on an .hs-* class (the :root blocks declare
+   --hs- tokens only; the colour scheme is set for <html class="hs-root"> and <body class="hs-page">, never for a bare
+   root): a third-party UI receiving this sheet with the home badge is otherwise untouched. The sheet sits in the cascade
+   layer hs, so a page's own rules win over it wherever the <link> sits. Nothing is fetched. Both themes:
+   prefers-color-scheme, and data-theme="light|dark" on <html>, which wins over the OS. The six surface and ink tokens
+   are themed; the four status tokens are one fixed step each in every theme and colour SHAPES and RULES only - a state's
+   word is always set in the text token (test-ui-style.sh computes every rendered pair). */
+@layer hs {
+
+:root {
+	--hs-bg: #f4f5f7;        /* the page */
+	--hs-surface: #ffffff;   /* a tile, card, table, code block */
+	--hs-fg: #1a1a1a;        /* text */
+	--hs-muted: #5c6670;     /* secondary text, notes, table headings */
+	--hs-border: #d5d9df;    /* hairlines */
+	--hs-accent: #0b5cad;    /* links, focus, the live tile's hover */
+	--hs-ok: #0ca30c;        /* up, fresh, passed       - fixed in both themes, for shapes and rules */
+	--hs-stale: #fab219;     /* answered, but old       - fixed */
+	--hs-bad: #d03b3b;       /* down, failed            - fixed */
+	--hs-warn: #ec835a;      /* needs attention, not failed - fixed */
+	--hs-radius: 8px;
+	--hs-font: system-ui, -apple-system, "Segoe UI", sans-serif;
+	--hs-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	--hs-space-1: 4px;
+	--hs-space-2: 8px;
+	--hs-space-3: 14px;
+	--hs-space-4: 28px;
+}
+@media (prefers-color-scheme: dark) {
+	:root:where(:not([data-theme="light"])) {
+		--hs-bg: #11161d; --hs-surface: #1b2129; --hs-fg: #e6e9ee; --hs-muted: #aeb7c2; --hs-border: #303a46; --hs-accent: #8fc1ff;
+	}
+	:root:where(:not([data-theme="light"])).hs-root, :root:where(:not([data-theme="light"])) .hs-page { color-scheme: dark; }
+}
+:root[data-theme="dark"] {
+	--hs-bg: #11161d; --hs-surface: #1b2129; --hs-fg: #e6e9ee; --hs-muted: #aeb7c2; --hs-border: #303a46; --hs-accent: #8fc1ff;
+}
+:root[data-theme="dark"].hs-root, :root[data-theme="dark"] .hs-page { color-scheme: dark; }
+
+/* ---- the page: <html class="hs-root"> (the viewport's scrollbars follow the theme) and <body class="hs-page"> ---- */
+.hs-root { color-scheme: light; }
+.hs-page { color-scheme: light; margin: 0; font: 15px/1.5 var(--hs-font); background: var(--hs-bg); color: var(--hs-fg); -webkit-text-size-adjust: 100%; }
+.hs-page *, .hs-page *::before, .hs-page *::after { box-sizing: border-box; }
+.hs-page a { color: var(--hs-accent); }
+.hs-page a:focus-visible, .hs-page button:focus-visible, .hs-page input:focus-visible, .hs-page [tabindex]:focus-visible { outline: 3px solid var(--hs-accent); outline-offset: 2px; }
+.hs-page h1, .hs-page h2, .hs-page h3 { line-height: 1.3; overflow-wrap: anywhere; }
+.hs-page h2 { font-size: 18px; margin: 18px 0 10px; }
+.hs-page h3 { font-size: 15px; margin: 18px 0 8px; }
+.hs-page code, .hs-page kbd, .hs-page pre { font: 13px/1.45 var(--hs-mono); }
+.hs-page code { background: color-mix(in srgb, var(--hs-fg) 8%, transparent); border-radius: 4px; padding: 1px 5px; overflow-wrap: anywhere; }
+.hs-page kbd { display: inline-block; background: var(--hs-fg); color: var(--hs-bg); border-radius: 4px; padding: 1px 7px; }
+.hs-page button { font: 600 13px var(--hs-font); color: var(--hs-accent); background: var(--hs-surface); border: 1px solid var(--hs-accent); border-radius: 12px; padding: 3px 10px; cursor: pointer; }
+.hs-page input, .hs-page select, .hs-page textarea { font: 14px var(--hs-font); color: var(--hs-fg); background: var(--hs-surface); border: 1px solid var(--hs-border); border-radius: 6px; padding: 6px 8px; }
+.hs-wrap { max-width: var(--hs-max, 1700px); margin: 0 auto; padding: 0 var(--hs-space-4); }
+.hs-muted { color: var(--hs-muted); }
+.hs-small { font-size: 13px; }
+.hs-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---- header: the harness's own ink in both themes, centred on the page's measure --hs-max (1700px unless :root sets it) ---- */
+.hs-header { background: #232f3e; color: #ffffff; padding: 18px max(var(--hs-space-4), calc((100% - var(--hs-max, 1700px)) / 2 + var(--hs-space-4))); }
+.hs-header h1 { margin: 0; font-size: 20px; }
+.hs-header p { margin: 4px 0 0; font-size: 13px; color: #d5dbe3; overflow-wrap: anywhere; }
+.hs-header a { color: #b9dcff; }
+.hs-header a:focus-visible { outline-color: #ffffff; }
+
+/* ---- surfaces: tile (one click target, a state pill, a purpose, a note), card, stat ---- */
+.hs-tiles { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(248px, 100%), 1fr)); gap: var(--hs-space-3); padding: 0; margin: 0; }
+.hs-tile, .hs-card, .hs-stat { background: var(--hs-surface); border: 1px solid var(--hs-border); border-radius: var(--hs-radius); padding: 12px var(--hs-space-3); }
+.hs-tile { position: relative; }
+.hs-tile > a, .hs-tile > .hs-title, .hs-card > .hs-title { display: block; font-size: 16px; font-weight: 600; line-height: 1.35; color: var(--hs-accent); text-decoration: none; overflow-wrap: anywhere; }
+.hs-tile > .hs-title, .hs-card > .hs-title { color: var(--hs-fg); }
+.hs-tile > a::before { content: ""; position: absolute; inset: 0; border-radius: var(--hs-radius); }
+.hs-tile > a[target="_blank"]::after { content: " \2197" / " (opens in a new tab)"; font-weight: 400; }
+.hs-tile:not(.off):hover { border-color: var(--hs-accent); box-shadow: 0 2px 8px color-mix(in srgb, var(--hs-accent) 18%, transparent); }
+.hs-tile:not(.off):hover > a { text-decoration: underline; }
+.hs-tile:has(> a:focus-visible) { outline: 3px solid var(--hs-accent); outline-offset: 2px; }
+.hs-tile p, .hs-card p { margin: 6px 0 0; font-size: 13px; }
+.hs-tile .hs-note, .hs-card .hs-note { color: var(--hs-muted); font-size: 12px; }
+.hs-tile .hs-note:empty { display: none; }
+.hs-tile.off { background: color-mix(in srgb, var(--hs-surface) 55%, var(--hs-bg)); border-style: dashed; }
+.hs-tile.bad { border-color: var(--hs-bad); box-shadow: inset 4px 0 0 var(--hs-bad); }
+.hs-tile .hs-why { font-weight: 600; }
+.hs-stat { min-height: 92px; }
+.hs-stat .k { font-size: 12px; color: var(--hs-muted); text-transform: uppercase; letter-spacing: .04em; }
+.hs-stat .v { font-size: 22px; font-weight: 700; margin: 2px 0; overflow-wrap: anywhere; }
+.hs-stat .d { font-size: 13px; color: var(--hs-muted); overflow-wrap: anywhere; }
+
+/* ---- the state pill: a word (in the text token) and a shape (ringed in the text token, filled with the fixed status
+        step). ring = checking, disc = ok, half disc = stale, square = bad, dotted ring = off. Empty, it labels itself
+        from its state; with text inside, that text is the label. ---- */
+.hs-dot { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 11px; font: 600 12px/1 var(--hs-font); white-space: nowrap; vertical-align: middle; color: var(--hs-fg); background: color-mix(in srgb, var(--hs-muted) 12%, var(--hs-surface)); }
+.hs-dot::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--hs-fg); flex: none; }
+.hs-dot:empty::after { content: "checking\2026"; }
+.hs-dot.ok { background: color-mix(in srgb, var(--hs-ok) 12%, var(--hs-surface)); }
+.hs-dot.ok::before { background: var(--hs-ok); }
+.hs-dot.ok:empty::after { content: "up"; }
+.hs-dot.stale { background: color-mix(in srgb, var(--hs-stale) 12%, var(--hs-surface)); }
+.hs-dot.stale::before { background: linear-gradient(90deg, var(--hs-stale) 50%, transparent 50%); }
+.hs-dot.stale:empty::after { content: "stale"; }
+.hs-dot.bad { background: color-mix(in srgb, var(--hs-bad) 12%, var(--hs-surface)); }
+.hs-dot.bad::before { border-radius: 2px; background: var(--hs-bad); }
+.hs-dot.bad:empty::after { content: "down"; }
+.hs-dot.off { color: var(--hs-muted); }
+.hs-dot.off::before { border-style: dotted; border-color: var(--hs-muted); }
+.hs-dot.off:empty::after { content: "off"; }
+
+/* ---- table: cells carry data-label="<heading>"; below 700 px every row becomes a card of label/value lines ---- */
+.hs-table { width: 100%; border-collapse: collapse; background: var(--hs-surface); border: 1px solid var(--hs-border); font-size: 14px; }
+.hs-table th, .hs-table td { text-align: left; padding: 7px 10px; border-top: 1px solid var(--hs-border); vertical-align: top; overflow-wrap: anywhere; }
+.hs-table thead th { border-top: none; font-size: 12px; color: var(--hs-muted); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.hs-table tbody tr:first-child td { border-top: none; }
+.hs-table caption { text-align: left; font-size: 13px; color: var(--hs-muted); padding: 0 0 6px; }
+@media (max-width: 699px) {
+	.hs-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+	.hs-table, .hs-table tbody, .hs-table tr, .hs-table td, .hs-table caption { display: block; }
+	.hs-table tr { border-top: 1px solid var(--hs-border); padding: 6px 10px; }
+	.hs-table tbody tr:first-child { border-top: none; }
+	.hs-table td { display: grid; grid-template-columns: minmax(6em, 32%) 1fr; gap: 0 10px; border: 0; padding: 2px 0; }
+	.hs-table td::before { content: attr(data-label); font-size: 12px; color: var(--hs-muted); text-transform: uppercase; letter-spacing: .04em; }
+}
+
+/* ---- empty, error (a callout whose left rule carries the status step; its words stay in the text token), code ---- */
+.hs-empty { border: 1px dashed var(--hs-border); border-radius: var(--hs-radius); padding: var(--hs-space-3); color: var(--hs-muted); font-size: 13px; text-align: center; }
+.hs-error { background: var(--hs-surface); border: 1px solid var(--hs-border); border-left: 4px solid var(--hs-bad); border-radius: var(--hs-radius); padding: 10px var(--hs-space-3); font-size: 14px; overflow-wrap: anywhere; }
+.hs-error.warn { border-left-color: var(--hs-warn); }
+.hs-error.ok { border-left-color: var(--hs-ok); }
+.hs-code { font: 13px/1.45 var(--hs-mono); background: var(--hs-surface); border: 1px solid var(--hs-border); border-radius: var(--hs-radius); padding: 10px 12px; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; overflow: auto; }
+
+/* ---- the Harness home badge (home-render.sh badge_html, both placements): the same ink in both themes, a border for dark
+        UIs, a two-tone focus ring. !important on the look and the ring: the badge is injected into pages this harness
+        does not control (their rules and outline resets must not restyle it; a policy that refuses this sheet leaves its
+        markup's hex-free fallback). Its corner is the markup's (inline phone rule + keeper script; inline always beats
+        this sheet). Its clearance is the route's: --hs-badge-offset on the root (0 by default) lifts it above a control
+        in that corner, --hs-badge-shift moves it left of a column of controls, as a translation nothing inline touches.
+        test-lib/ui-style-browser.py --badge-clear proves it. ---- */
+.hs-badge { position: fixed; bottom: 14px; right: 14px; z-index: 2147483647; translate: calc(-1 * var(--hs-badge-shift, 0px)) calc(-1 * var(--hs-badge-offset, 0px)) !important; background: #232f3e !important; color: #ffffff !important; border: 1px solid #ffffff !important; padding: 6px 12px !important; border-radius: 16px !important; font: 13px/1.2 var(--hs-font) !important; text-decoration: none !important; opacity: .92 !important; }
+.hs-badge:hover, .hs-badge:focus-visible { opacity: 1 !important; }
+.hs-badge:focus-visible { outline: 3px solid #ffffff !important; outline-offset: 2px !important; box-shadow: 0 0 0 7px #232f3e !important; }
+
+/* ---- a phone (390 px must work): tighter gutters; the badge's own phone rule travels with its markup ---- */
+@media (max-width: 600px) {
+	.hs-header { padding: 12px 16px; }
+	.hs-header h1 { font-size: 18px; }
+	.hs-wrap { padding: 0 16px; }
+	.hs-tiles { gap: 10px; }
+}
+
+}

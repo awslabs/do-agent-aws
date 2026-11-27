@@ -1,0 +1,36 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+# The kanban board's relay (docs/manual/boards.md "Kanban board", the relay) - an overlay of docker-compose.yaml and
+# docker-compose.kanban.yaml that run.sh renders and adds with -f only while the relay is on (UI_KANBAN_RELAY=true,
+# with the board); stop.sh and status.sh add it when the rendered file exists.
+#
+# The upstream relay server built by ./build.sh from the board's pinned source, as upstream's
+# crates/remote/docker-compose.yml runs it in its "relay" profile, publishing no host port: on kanban-internal for the
+# board's database, and on the project's default network, where the agent's runner connects to it as a host and the
+# agent's home proxy sends the board's /v1/relay/ requests. Its settings come from the mode-600 env file ./kanban.sh
+# init writes under wd/kanban (run.sh runs it), so no secret lands in this rendered file.
+
+services:
+
+  # the agent: the relay its runner uses (merged into the agent service of docker-compose.yaml)
+  ${CONTAINER}:
+    environment:
+      - KANBAN_RELAY_URL=${KANBAN_RELAY_URL}
+
+  kanban-relay:
+    image: ${KANBAN_RELAY_IMAGE}
+    networks:
+      - default
+      - kanban-internal
+    env_file:
+      - ${KANBAN_DIR}/relay.env
+    depends_on:
+      kanban-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:${PORT_INTERNAL_KANBAN_RELAY}/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped

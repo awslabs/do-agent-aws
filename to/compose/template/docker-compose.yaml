@@ -1,0 +1,244 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+version: "3.9"
+
+services:
+
+  ${CONTAINER}:
+    image: ${REGISTRY}${IMAGE}${TAG}
+    # no process in the agent container gains privileges through a setuid or setgid binary (the docker target's
+    # --security-opt no-new-privileges, the kubernetes pod's allowPrivilegeEscalation: false)
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      # The harness home page + reverse proxy: the ONE published port - every enabled UI is
+      # reached through it. Published on UI_BIND_HOST, loopback by default, as the docker
+      # target does (see .env UI_PORT_MAP and docs/manual/ui.md "Home page and reverse proxy")
+      - ${UI_BIND_HOST}:${PORT_EXTERNAL_HOME}:${PORT_INTERNAL_HOME}
+      # Per-UI direct ports (the pre-home behavior) - uncomment for debugging or a UI the
+      # proxy cannot carry (see UI_PUBLISH_DIRECT_PORTS in .env and docs/manual/ui.md "Harness UIs")
+      #- 127.0.0.1:${PORT_EXTERNAL_HEADLAMP}:${PORT_INTERNAL_HEADLAMP}
+      #- 127.0.0.1:${PORT_EXTERNAL_HINDSIGHT_API}:${PORT_INTERNAL_HINDSIGHT_API}
+      #- 127.0.0.1:${PORT_EXTERNAL_HINDSIGHT_UI}:${PORT_INTERNAL_HINDSIGHT_UI}
+      #- 127.0.0.1:${PORT_EXTERNAL_VIBE_KANBAN}:${PORT_INTERNAL_VIBE_KANBAN}
+      #- 127.0.0.1:${PORT_EXTERNAL_TMUX}:${PORT_INTERNAL_TMUX}
+      #- 127.0.0.1:${PORT_EXTERNAL_TMUX_AGENT}:${PORT_INTERNAL_TMUX_AGENT}
+      # (claude-mem and loglearner bind 127.0.0.1 inside the container: home proxy only, no direct publish)
+      #- 127.0.0.1:${PORT_EXTERNAL_COMMS_UI}:${PORT_INTERNAL_COMMS_UI}
+    volumes:
+      # the checkout READ-ONLY: every host script sources its .env and .env.local (docs/manual/install.md "Container user")
+      - ${VOLUME_PATH_EXTERNAL}:${VOLUME_PATH_INTERNAL}:ro
+      # Agent state persisted on the host, seeded from the image on first run (see .env AGENT_STATE_VOL_MAP);
+      # the Hindsight memory database (embedded PostgreSQL, owned by the hindsight user) and vibe-kanban's
+      # state (config, workspace database, signing key) included
+      - agent-state-claude:/home/agent/.claude
+      - agent-state-claude-mem:/home/agent/.claude-mem
+      - agent-state-hindsight:/home/agent/.hindsight
+      - agent-state-hindsight-pg0:/home/hindsight/.pg0
+      - agent-state-vibe-kanban:/home/agent/.local/share/vibe-kanban
+      # the container's own kubeconfig (the agent's aws eks update-kubeconfig, docs/manual/install.md "Setup doctor"): this
+      # template mounts no host ~/.kube, so it is kept here as the docker target keeps it without one
+      - agent-state-kube:/home/agent/.kube
+    # AWS credential/region passthrough from the host environment for headless Bedrock access.
+    # Entries without a value are resolved from the host environment when set there.
+    environment:
+      - AWS_REGION
+      - AWS_DEFAULT_REGION
+      - AWS_PROFILE
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+      - AWS_BEARER_TOKEN_BEDROCK
+      # the AWS Secrets Manager secret the container loads its third-party credentials from (docs/manual/aws.md "Credentials from AWS
+      # Secrets Manager"); empty loads nothing
+      - AGENT_SECRETS_ID=${AGENT_SECRETS_ID}
+      - AGENT_SECRETS_REGION=${AGENT_SECRETS_REGION}
+      - AGENT_SECRETS_NAMES=${AGENT_SECRETS_NAMES}
+      # The model settings (see .env "Model settings" and docs/manual/aws.md "Bedrock connectivity"): the model id Claude Code
+      # calls, with [1m] for the 1M-token context window, its effort level, and the ids of the opus and fable aliases.
+      # An empty setting passes an empty value here, where the docker target passes nothing (measured: an empty
+      # ANTHROPIC_MODEL left Claude Code on its own default model)
+      - ANTHROPIC_MODEL=${AGENT_MODEL}
+      - CLAUDE_CODE_EFFORT_LEVEL=${AGENT_EFFORT}
+      - ANTHROPIC_DEFAULT_OPUS_MODEL=${AGENT_MODEL_OPUS}
+      - ANTHROPIC_DEFAULT_FABLE_MODEL=${AGENT_MODEL_FABLE}
+      # Autonomy loop settings (see .env and docs/manual/autonomy.md "Autonomy loop")
+      - AUTONOMY_LOOP=${AUTONOMY_LOOP}
+      - AUTONOMY_LOOP_INTERVAL=${AUTONOMY_LOOP_INTERVAL}
+      - AUTONOMY_LOOP_GOALS=${AUTONOMY_LOOP_GOALS}
+      - AUTONOMY_LOOP_FIRE_TIMEOUT=${AUTONOMY_LOOP_FIRE_TIMEOUT}
+      - AUTONOMY_LOOP_CLAUDE_OPTS=${AUTONOMY_LOOP_CLAUDE_OPTS}
+      - AUTONOMY_LOOP_OPTS_CHECK=${AUTONOMY_LOOP_OPTS_CHECK}
+      - LOOP_INBOX=${LOOP_INBOX}
+      - LOOP_INBOX_MAX=${LOOP_INBOX_MAX}
+      # The loop's supervisor mode (see .env AUTONOMY_LOOP_MODE and docs/manual/autonomy.md "Autonomy loop", "Supervisor mode") - not the
+      # spoke supervisor below
+      - AUTONOMY_LOOP_MODE=${AUTONOMY_LOOP_MODE}
+      - AUTONOMY_LOOP_DRY_RUN=${AUTONOMY_LOOP_DRY_RUN}
+      - SUPERVISOR_MAX_WORKERS=${SUPERVISOR_MAX_WORKERS}
+      - SUPERVISOR_MODEL_PASS=${SUPERVISOR_MODEL_PASS}
+      - SUPERVISOR_MODEL_TIMEOUT=${SUPERVISOR_MODEL_TIMEOUT}
+      - SUPERVISOR_STRIKES_MAX=${SUPERVISOR_STRIKES_MAX}
+      - SUPERVISOR_PARK_CYCLES=${SUPERVISOR_PARK_CYCLES}
+      - SUPERVISOR_WORKER_OPTS=${SUPERVISOR_WORKER_OPTS}
+      # Shared agent tmux session settings (see .env and docs/manual/ui.md "tmux in the browser")
+      - AGENT_TMUX_SESSION=${AGENT_TMUX_SESSION}
+      - AGENT_TMUX_SESSION_NAME=${AGENT_TMUX_SESSION_NAME}
+      - AGENT_TMUX_CLAUDE=${AGENT_TMUX_CLAUDE}
+      - AGENT_TMUX_CLAUDE_OPTS=${AGENT_TMUX_CLAUDE_OPTS}
+      - TMUX_AUTO_ATTACH=${TMUX_AUTO_ATTACH}
+      # Spoke agents and their supervisor (see .env and docs/manual/agents.md "Spoke agents"); each resolves from the environment .env exports
+      - SPOKE_EXAMPLE
+      - SPOKE_CONVERSATIONS
+      - SPOKE_INSIGHTS
+      - SPOKE_CLUSTERS
+      - SPOKE_SESSIONS
+      - SPOKE_LOOPS
+      - SPOKE_ISSUES
+      # the docker spoke runs here without its build substrate, which only ./run.sh's docker target starts (docs/manual/agents.md "Docker agent")
+      - SPOKE_DOCKER
+      - SUPERVISOR
+      - SUPERVISOR_INTERVAL
+      - SUPERVISOR_RESTART_CAP
+      - SUPERVISOR_HEALTHY_SECS
+      - SUPERVISOR_START_GRACE
+      - SUPERVISOR_MEMORY_QUEUE_WARN
+      - SUPERVISOR_CLOSE_EXITED
+      # Slack connectivity settings (see .env and docs/manual/channels.md "Slack connectivity");
+      # SLACK_BOT_TOKEN resolves from the host environment so its value never lands in a rendered file
+      - SLACK_BOT_TOKEN
+      - SLACK_CHANNELS=${SLACK_CHANNELS}
+      - SLACK_ALLOWED_USERS=${SLACK_ALLOWED_USERS}
+      - SLACK_TEST_CHANNEL=${SLACK_TEST_CHANNEL}
+      - SLACK_WATCH_ENABLED=${SLACK_WATCH_ENABLED}
+      - SLACK_POST_ENABLED=${SLACK_POST_ENABLED}
+      - SLACK_REPLY_IN_THREAD=${SLACK_REPLY_IN_THREAD}
+      - SLACK_CHAT_ENABLED=${SLACK_CHAT_ENABLED}
+      - SLACK_CHAT_POLL_INTERVAL=${SLACK_CHAT_POLL_INTERVAL}
+      - SLACK_CHAT_TIMEOUT=${SLACK_CHAT_TIMEOUT}
+      # SLACK_CHAT_CLAUDE_OPTS resolves from the host environment when set there; the default is in /agent/slack-chat.sh
+      - SLACK_CHAT_CLAUDE_OPTS
+      # Harness UI settings (see .env and docs/manual/ui.md "Harness UIs");
+      # HINDSIGHT_API_LLM_* resolve from the host environment when set there
+      - UI_START=${UI_START}
+      - UI_HEADLAMP=${UI_HEADLAMP}
+      - UI_HINDSIGHT=${UI_HINDSIGHT}
+      # Default knowledge seed for the Hindsight memory (see .env HINDSIGHT_SEED)
+      - HINDSIGHT_SEED=${HINDSIGHT_SEED}
+      - UI_VIBE_KANBAN=${UI_VIBE_KANBAN}
+      - UI_CLAUDE_MEM=${UI_CLAUDE_MEM}
+      - UI_LOGLEARNER=${UI_LOGLEARNER}
+      # Agent learning: the LogLearner PreToolUse hook (see .env and docs/manual/memory.md "Agent learning tools")
+      - LOGLEARNER_HOOK=${LOGLEARNER_HOOK}
+      - AGENT_KNOWLEDGE=${AGENT_KNOWLEDGE}
+      # A GitHub token for the agent and its GitHub plugin (see .env GITHUB_ENV_OPTS); resolved from the host
+      # environment so a value never lands in a rendered file - unset, the plugin stays disabled
+      - GH_TOKEN
+      - GITHUB_TOKEN
+      - GITHUB_PERSONAL_ACCESS_TOKEN
+      # the context7 plugin, off unless asked for (see .env CONTEXT7_PLUGIN)
+      - CONTEXT7_PLUGIN=${CONTEXT7_PLUGIN}
+      # the claude-mem viewer's address as the browser reaches it (see .env CLAUDE_MEM_PUBLIC_URL)
+      - CLAUDE_MEM_PUBLIC_URL=${CLAUDE_MEM_PUBLIC_URL}
+      # the Board needs the Plane board (UI_PLANE, off by default; its sidecars run on the docker target only): with the board off
+      # there is no Board tile here, with UI_PLANE=true the tile says the board is not on this target
+      - UI_BOARD=${UI_BOARD}
+      # the Files tile (see .env UI_FILES and docs/manual/ui.md "Files"): the shared folder and its upload cap
+      - UI_FILES=${UI_FILES}
+      - FILES_DIR=${FILES_DIR}
+      - FILES_MAX_UPLOAD_MB=${FILES_MAX_UPLOAD_MB}
+      - UI_LOOP=${UI_LOOP}
+      - UI_LOOP_CONTROL=${UI_LOOP_CONTROL}
+      - UI_HOME=${UI_HOME}
+      - UI_HOME_HOSTNAMES=${UI_HOME_HOSTNAMES}
+      - UI_HOME_ALLOW_FROM=${UI_HOME_ALLOW_FROM}
+      - UI_PUBLISH_DIRECT_PORTS=${UI_PUBLISH_DIRECT_PORTS}
+      - UI_TMUX=${UI_TMUX}
+      - UI_TMUX_WRITABLE=${UI_TMUX_WRITABLE}
+      - UI_TMUX_AGENT=${UI_TMUX_AGENT}
+      # the Agent chat page (see .env UI_CHAT and docs/manual/ui.md "Agent chat")
+      - UI_CHAT=${UI_CHAT}
+      - UI_PORT_HEADLAMP=${PORT_INTERNAL_HEADLAMP}
+      - UI_PORT_HINDSIGHT_API=${PORT_INTERNAL_HINDSIGHT_API}
+      - UI_PORT_HINDSIGHT_UI=${PORT_INTERNAL_HINDSIGHT_UI}
+      - UI_PORT_VIBE_KANBAN=${PORT_INTERNAL_VIBE_KANBAN}
+      - UI_PORT_CLAUDE_MEM=${PORT_INTERNAL_CLAUDE_MEM}
+      - UI_PORT_LOGLEARNER=${PORT_INTERNAL_LOGLEARNER}
+      - UI_PORT_BOARD=${PORT_INTERNAL_BOARD}
+      - UI_PORT_FILES=${PORT_INTERNAL_FILES}
+      - UI_PORT_CHAT=${PORT_INTERNAL_CHAT}
+      - UI_PORT_LOOP=${PORT_INTERNAL_LOOP}
+      - UI_PORT_HOME=${PORT_INTERNAL_HOME}
+      - PORT_EXTERNAL_HOME=${PORT_EXTERNAL_HOME}
+      - UI_PORT_TMUX=${PORT_INTERNAL_TMUX}
+      - UI_PORT_TMUX_AGENT=${PORT_INTERNAL_TMUX_AGENT}
+      # the agent's git identity (see .env GIT_USER_NAME / GIT_USER_EMAIL and docs/manual/install.md "Git identity")
+      - GIT_USER_NAME=${GIT_USER_NAME}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL}
+      # the agent runner's automatic commit (see .env VK_RUNNER_AUTO_COMMIT and docs/manual/install.md "Git identity")
+      - VK_RUNNER_AUTO_COMMIT=${VK_RUNNER_AUTO_COMMIT}
+      # Optional tmux-agent dashboard source (see .env and docs/manual/ui.md "tmux-agent dashboard");
+      # TMUX_AGENT_SRC resolves from the host environment so a token URL never lands in a
+      # rendered file - unset, the build vendored into the image is served
+      - TMUX_AGENT_SRC
+      - TMUX_AGENT_REF=${TMUX_AGENT_REF}
+      - TMUX_AGENT_INSTALL_DIR=${TMUX_AGENT_INSTALL_DIR}
+      - HINDSIGHT_API_LLM_PROVIDER
+      - HINDSIGHT_API_LLM_API_KEY
+      - HINDSIGHT_API_LLM_MODEL
+      # Comms UI settings (see .env and docs/manual/channels.md "Comms UI"); the engine reads credentials
+      # only from env: references in an operator-written settings.json - no tokens here
+      - COMMS_UI_ENABLED=${COMMS_UI_ENABLED}
+      - LOOP_DECK_URL=${LOOP_DECK_URL}
+      - UI_LOOP_DECK=${UI_LOOP_DECK}
+      - COMMS_UI_PORT=${PORT_INTERNAL_COMMS_UI}
+      - COMMS_DEMO_SEED=${COMMS_DEMO_SEED}
+      - COMMS_UI_WRITE_ENABLED=${COMMS_UI_WRITE_ENABLED}
+      - COMMS_UI_BASE_PATH=${COMMS_UI_BASE_PATH}
+      # Comms real-channel watcher gate (see .env and docs/comms/README.md "Connect a real channel")
+      - COMMS_WATCH_ENABLED=${COMMS_WATCH_ENABLED}
+      # Credentials for the comms engine's env: references (docs/comms/README.md): add one
+      # value-less line per NAME listed in COMMS_ENV_NAMES so it resolves from the host
+      # environment and its value never lands in a rendered file - the SLACK_BOT_TOKEN
+      # pattern above. Example:
+      # - MY_SLACK_TOKEN
+      # - MY_SLACK_CHANNELS
+
+volumes:
+  agent-state-claude:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${AGENT_STATE_PATH_EXTERNAL}/.claude
+  agent-state-claude-mem:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${AGENT_STATE_PATH_EXTERNAL}/.claude-mem
+  agent-state-hindsight:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${AGENT_STATE_PATH_EXTERNAL}/.hindsight
+  agent-state-hindsight-pg0:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${AGENT_STATE_PATH_EXTERNAL}/hindsight-pg0
+  agent-state-vibe-kanban:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${AGENT_STATE_PATH_EXTERNAL}/vibe-kanban
+  agent-state-kube:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${AGENT_STATE_PATH_EXTERNAL}/.kube
+ 

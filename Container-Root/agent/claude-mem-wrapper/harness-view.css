@@ -1,0 +1,63 @@
+/* Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. */
+/* SPDX-License-Identifier: Apache-2.0 */
+/* do-agent-aws's harness view of the claude-mem viewer (harness-view.js sets the class; the stock view has none) */
+html.adav-harness-view a[href^="https://cmem.ai/pro"],
+html.adav-harness-view a[href^="http://cmem.ai/pro"],
+html.adav-harness-view a[href*="//x.com/"],
+html.adav-harness-view a[href*="//twitter.com/"],
+html.adav-harness-view a[href*="//discord.gg/"],
+html.adav-harness-view a[href*="//discord.com/"] {
+	display: none !important;
+}
+html.adav-harness-view .prompt-card .card-content[data-adav-machine] {
+	display: none !important;
+}
+.adav-machine-prompt {
+	margin: 4px 0 2px;
+}
+.adav-machine-prompt > summary {
+	cursor: pointer;
+	font-weight: 600;
+	color: #4a5568;
+}
+.adav-machine-prompt-text {
+	white-space: pre-wrap;
+	font-size: 0.85em;
+	color: #4a5568;
+	margin-top: 6px;
+	max-height: 40vh;
+	overflow: auto;
+}
+#adav-harness-view-note {
+	position: fixed;
+	bottom: 12px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 2147482000;
+	font: 12px/1.4 system-ui, sans-serif;
+	background: #f7fafc;
+	color: #2d3748;
+	border: 1px solid #a0aec0;
+	border-radius: 999px;
+	padding: 4px 12px;
+	white-space: nowrap;
+}
+/* a phone: inside the screen, above the home badge's row at the bottom */
+@media (max-width: 480px) {
+	#adav-harness-view-note {
+		bottom: 56px;
+		max-width: calc(100vw - 24px);
+		white-space: normal;
+		text-align: center;
+		border-radius: 12px;
+	}
+}
+#adav-harness-view-note button {
+	font: inherit;
+	background: none;
+	border: 0;
+	color: #2b6cb0;
+	text-decoration: underline;
+	cursor: pointer;
+	padding: 0 0 0 8px;
+}

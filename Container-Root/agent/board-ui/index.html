@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en" class="hs-root">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Board - do-agent-aws harness</title>
+<link rel="stylesheet" href="/__harness/harness.css">
+<link rel="stylesheet" href="/board.css">
+</head>
+<body class="hs-page">
+<header class="hs-header">
+<h1>Board</h1>
+<p id="subtitle">the agent's goals as cards, and the agent runner's attempts on the cards they belong to</p>
+<span id="state" class="hs-dot" data-state="checking">checking</span>
+</header>
+<main>
+<p id="notice" class="hs-error" hidden></p>
+<div id="columns" class="board" aria-live="polite"></div>
+<section id="unlinked" class="hs-card" hidden>
+<h2>Runner attempts that name no card</h2>
+<p class="hs-muted">an attempt shows on a card when its name or branch carries the card's key, for example AGENT-3</p>
+<ul></ul>
+</section>
+<p id="legend" class="hs-muted">read-only - nothing here changes the board or the runner; the view refreshes every <span id="refresh">30</span> seconds</p>
+</main>
+<script src="/board.js"></script>
+</body>
+</html>

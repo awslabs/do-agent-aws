@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en" class="hs-root">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knowledge transfer - do-agent-aws harness</title>
+<link rel="stylesheet" href="/__harness/harness.css">
+<link rel="stylesheet" href="style.css">
+<script src="app.js" defer></script>
+</head>
+<body class="hs-page" data-page="knowledge">
+<header class="hs-header">
+<h1>Knowledge transfer</h1>
+<p class="sub">move what this harness knows to another harness as one pack file: the LogLearner rules the agent gets before its tool calls, and the Hindsight memory banks</p>
+</header>
+<main class="hs-wrap">
+<section class="hs-card" aria-labelledby="h-stores">
+<h2 id="h-stores" class="hs-title">What this harness knows</h2>
+<p id="stores-state" role="status" aria-live="polite">reading the stores&hellip;</p>
+<table class="hs-table" id="stores" hidden>
+<thead><tr><th scope="col">Export</th><th scope="col">Store</th><th scope="col">Bank</th><th scope="col">Records</th></tr></thead>
+<tbody id="stores-rows"></tbody>
+</table>
+</section>
+<section class="hs-card" aria-labelledby="h-export">
+<h2 id="h-export" class="hs-title">Export</h2>
+<p>Tick what goes into the pack in the table above. A tag, a range of days (the day a record came into its store) or a search narrows it further. Or find records and tick them one by one: then the pack holds exactly the records ticked. This image's own default knowledge, which every harness of the same image already has, stays out unless you include it.</p>
+<div class="fields">
+<label>Pack name <input id="name" value="knowledge" maxlength="64" autocomplete="off" spellcheck="false"></label>
+<label>Tag <input id="tag" placeholder="any tag" autocomplete="off" spellcheck="false"></label>
+<label>From <input id="since" type="date"></label>
+<label>To <input id="until" type="date"></label>
+</div>
+<div class="fields">
+<label>Search <input id="q" type="search" maxlength="200" placeholder="an id, or words of a title" autocomplete="off" spellcheck="false"></label>
+<button type="button" id="find">Find records</button>
+</div>
+<p class="hs-note">A LogLearner record matches by its id or its title; a Hindsight document by its id, the memory API's own search.</p>
+<label class="check"><input type="checkbox" id="defaults"> Include this image's default knowledge (the records of its team and seed packs, and its seed banks' documents)</label>
+<p id="found-state" role="status" aria-live="polite" hidden></p>
+<table class="hs-table" id="found" hidden>
+<thead><tr><th scope="col"><input type="checkbox" id="found-all" aria-label="Tick every record shown"></th><th scope="col">Store</th><th scope="col">Bank</th><th scope="col">Id</th><th scope="col">Title or day</th></tr></thead>
+<tbody id="found-rows"></tbody>
+</table>
+<p class="hs-note">Give each harness's pack its own name (lower-case letters, digits, _ and -): where it is imported, a pack replaces the kept pack of the same name. Every export passes the scrub gate first: a record that looks like it holds a secret stops the export, and the page names the record, never the value.</p>
+<button type="button" id="export">Export</button>
+<div class="result" id="export-result" role="status" aria-live="polite"></div>
+</section>
+<section class="hs-card" aria-labelledby="h-import">
+<h2 id="h-import" class="hs-title">Import</h2>
+<p>A pack from the Knowledge transfer page of another harness. Check it first: every file is checked against the sha256 its manifest records, and the page says what the import would add and what each store already has. Nothing is written until you press Import.</p>
+<div class="fields">
+<label>Pack file <input type="file" id="pack" accept=".tar.gz,.tgz,application/gzip"></label>
+<label>A memory bank already has the document <select id="on-conflict">
+<option value="skip" selected>keep the bank's (skip)</option>
+<option value="replace">replace it with the pack's</option>
+<option value="new-id">add the pack's beside it (new id)</option>
+</select></label>
+</div>
+<button type="button" id="preview">Check</button>
+<button type="button" id="import" disabled>Import</button>
+<div class="result" id="import-result" role="status" aria-live="polite"></div>
+</section>
+<section class="hs-card" aria-labelledby="h-kept">
+<h2 id="h-kept" class="hs-title">Imported packs</h2>
+<p>Kept in <code id="kept-dir">the imported directory</code> and loaded again at every start, after the default knowledge.</p>
+<ul id="kept"></ul>
+</section>
+<section class="hs-card" aria-labelledby="h-group">
+<h2 id="h-group" class="hs-title">A shared knowledge base for a group of harnesses</h2>
+<p>Every harness of the group loads the same pack at its start: <a href="/guide/knowledge-sharing/">Sharing knowledge between harnesses</a> shows how, with two harnesses as the example.</p>
+</section>
+</main>
+</body>
+</html>

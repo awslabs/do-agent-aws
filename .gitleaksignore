@@ -1,0 +1,33 @@
+# Verified false positives in earlier commits: synthetic test fixtures and documentation placeholders, no credentials.
+# One gitleaks fingerprint per line: commit:file:rule:line.
+1050db6f3a9127a90b6b049e76e9ca0b6c0069d6:Container-Root/test15.sh:aws-access-token:581
+1050db6f3a9127a90b6b049e76e9ca0b6c0069d6:Container-Root/test15.sh:aws-access-token:585
+14ed122e4298efa8da3f8c57c1bf0f1d69fb24b9:Container-Root/test18.sh:jwt:825
+27336f90917a7cbed3bb677387b4f5fefaae5f09:Container-Root/test18.sh:curl-auth-header:1372
+362a9adeb03652264782cec36d5a4462498d9eba:Container-Root/test18.sh:curl-auth-header:1231
+362a9adeb03652264782cec36d5a4462498d9eba:Container-Root/test18.sh:curl-auth-header:1250
+362a9adeb03652264782cec36d5a4462498d9eba:Container-Root/test18.sh:curl-auth-header:1306
+362a9adeb03652264782cec36d5a4462498d9eba:Container-Root/test18.sh:curl-auth-header:1314
+39d4744fcec9b887b351c88264a7863f7ba0d044:Container-Root/test15.sh:aws-access-token:544
+39d4744fcec9b887b351c88264a7863f7ba0d044:Container-Root/test15.sh:aws-access-token:554
+39d4744fcec9b887b351c88264a7863f7ba0d044:Container-Root/test15.sh:jwt:544
+39d4744fcec9b887b351c88264a7863f7ba0d044:Container-Root/test15.sh:jwt:555
+58b1e5b1d45544ce018f8fd5fa4e4558d4a1ce88:Container-Root/test-agent-learning.sh:aws-access-token:375
+58b1e5b1d45544ce018f8fd5fa4e4558d4a1ce88:Container-Root/test-agent-learning.sh:aws-access-token:384
+596c8017ab6199dac4b78962da4e0fee36ba664d:Container-Root/test15.sh:curl-auth-header:394
+596c8017ab6199dac4b78962da4e0fee36ba664d:Container-Root/test15.sh:curl-auth-header:411
+7a0f1215635fb06ae5be43e2131f9076bd9d3166:Container-Root/test15.sh:curl-auth-header:909
+839b2e7e4c89451129569d08e99503c2e6f748c0:tools/fresh-deploy-proof/proof.sh:generic-api-key:194
+86f0534fa1dd5bcec71ab7794b89e6f29a45d91d:Container-Root/test18.sh:curl-auth-header:546
+86f0534fa1dd5bcec71ab7794b89e6f29a45d91d:Container-Root/test18.sh:curl-auth-header:557
+86f0534fa1dd5bcec71ab7794b89e6f29a45d91d:Container-Root/test18.sh:curl-auth-header:567
+8907071e938ed421d30989e3a0e200abef19275f:Container-Root/test15.sh:aws-access-token:548
+8907071e938ed421d30989e3a0e200abef19275f:Container-Root/test15.sh:aws-access-token:556
+8907071e938ed421d30989e3a0e200abef19275f:Container-Root/test15.sh:aws-access-token:559
+8907071e938ed421d30989e3a0e200abef19275f:Container-Root/test15.sh:jwt:556
+8907071e938ed421d30989e3a0e200abef19275f:Container-Root/test15.sh:jwt:571
+c60081079cbb0f0216f866cae3fbfcde84869a87:Container-Root/test16.sh:jwt:480
+c60081079cbb0f0216f866cae3fbfcde84869a87:Container-Root/test16.sh:jwt:491
+dc8627ed64c9ed6443322aa5f2f485b95cd32a00:docs/comms/email.md:hashicorp-tf-password:29
+ef766f98093e8540c1d103f4cc4e61f48def5a52:Container-Root/test17.sh:aws-access-token:115
+f27fb57ef7572ce02294f5f3ce320faee75ec336:docs/evaluations/backtests/backtests.json:generic-api-key:2899

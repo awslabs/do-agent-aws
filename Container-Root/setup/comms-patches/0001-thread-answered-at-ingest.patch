@@ -1,0 +1,1111 @@
+From 0058058a536baf032fdb98f527ae400025b52308 Mon Sep 17 00:00:00 2001
+From: aws-do-agent-anton
+ <343822247+aws-do-agent-anton@users.noreply.github.com>
+Date: Sat, 31 Oct 2026 04:22:10 +0000
+Subject: [PATCH 1/3] =?UTF-8?q?threads:=20a=20message=20that=20has=20a=20t?=
+ =?UTF-8?q?hread=20is=20answered=20=E2=80=94=20tie=20at=20ingest=20from=20?=
+ =?UTF-8?q?the=20parent's=20own=20thread=20summary,=20and=20let=20any=20fo?=
+ =?UTF-8?q?reign=20in-thread=20reply=20answer=20(threaded=5Fis=5Fanswered,?=
+ =?UTF-8?q?=20default=20on)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Measured on the aws-do-agent integration (operator, 2026-10-31): asks whose
+thread anyone could see on the platform read UNANSWERED on the dashboard, and
+kept being listed so. Two causes in the engine. The thread sweep is the only
+route to answered for an in-thread reply, and it is bounded (SWEEP_MAX roots
+per adapter per cycle, a 429 ends it), so a backfilled channel's answered asks
+stay open for as long as the window takes to reach them. And in the sweep a
+reply that classifies as an ask of its own is refused as the answer (review
+F7), so an agent's reply that ends in a question leaves its ask open although
+the thread visibly has an answer under it.
+
+The change, behind one per-instance setting, threaded_is_answered (default
+true; false restores today's behaviour exactly):
+
+* channels/CONTRACT.md: the optional capability thread_summary(message) ->
+  {reply_count, repliers, latest_reply} | None — what one polled row says about
+  the thread under it. The slack adapter reads it back from the raw row
+  (conversations.history serves a thread parent with reply_count, reply_users
+  and latest_reply, and the first poll of a channel serves every parent that
+  way); the fake adapter derives it from the messages it holds.
+* core/threads.py answered_from_summary(): for each polled top-level message
+  whose journal row is an open ask, the first replier other than the asker in
+  the summary ties the ask (key thread-reply:summary:<replier>, so the
+  dashboard's answered-by-thread count includes it), with no platform call. The
+  asker alone stays open; the unattributed placeholder answers nothing; a count
+  with no named replier stays open (a guess, and the engine never guesses); an
+  adapter without the capability yields None (declared absent, never "no
+  thread"). The tie is stamped at the sighting: the reply's own platform time
+  predates the row's first sighting and would read as EDITED AFTER RESPONSE.
+* core/schedule.py: the cycle ties after journaling and before the cursor
+  commits (a crash between the two re-polls and ties again), and with the
+  setting on passes the sweep no is_answer verdict — a foreign reply answers
+  whatever it says, and a follow-up question is still owed on its own row. The
+  sweep stays the route for a thread that grows after its parent was polled: a
+  cursored history poll never serves a parent twice.
+* core/config.py + scripts/scheduler.py: instances[].threaded_is_answered, a
+  JSON boolean (a quoted "false" is refused, like escalate_ambiguous), carried
+  on the Source.
+
+Docs: QUICKSTART (three routes to answered; the top-level-reply limit kept),
+README's slack row, core/README's threads row, the contract table, the slack
+adapter's README; tests/test_docs.py pins the new wording.
+
+Tests: tests/test_threads.py (the summary tie: a foreign replier ties with the
+summary key and no replies() call; the first foreign replier is named; the
+asker alone, an unattributed replier and a count without repliers stay open;
+only open asks are tied; a reply row ties nothing; an absent capability reads
+None; the stamp keeps edited_after_response empty; the fake's summary),
+tests/test_slack_adapter.py (the summary read from a history parent's raw row;
+None for a reply row and a foreign row), tests/test_schedule.py (a backfilled
+channel of 2*SWEEP_MAX answered asks closes in one cycle with zero replies()
+calls; by default a follow-up question answers the ask it is under and stays
+owed itself; the F7 behaviour under the setting off; the tie counts as a thread
+answer on the dashboard and closes the owed work), tests/test_portability.py
+(the key: default on, read from the instance, a quoted value refused).
+Red first: on the code with the setting default and the old F7 cycle test,
+that test failed (a question under the ask now answers it); the new tests fail
+on main (answered_from_summary and thread_summary do not exist there).
+python3 -m unittest discover -s tests: Ran 873 tests, one failure that is the
+same on main in this sandbox (test_portability's unreadable-subdirectory case,
+a host permission check). tests/mutation_check.sh: 12 new mutations, two
+re-anchored (the journal/cursor order mutation now spans the tie block; the
+"sweeps without the classifier's verdict" mutation pins the setting-off path),
+each caught.
+
+Signed-off-by: aws-do-agent-anton <343822247+aws-do-agent-anton@users.noreply.github.com>
+---
+ README.md                   |   2 +-
+ channels/CONTRACT.md        |   1 +
+ channels/fake/adapter.py    |  21 ++++++
+ channels/slack/README.md    |   2 +
+ channels/slack/adapter.py   |  27 ++++++++
+ core/README.md              |   2 +-
+ core/config.py              |  17 ++++-
+ core/schedule.py            |  34 ++++++++--
+ core/threads.py             |  55 +++++++++++++++
+ docs/QUICKSTART.md          |  32 ++++++---
+ scripts/scheduler.py        |   3 +-
+ tests/mutation_check.sh     |  64 +++++++++++++++++-
+ tests/test_docs.py          |  18 +++--
+ tests/test_portability.py   |  23 +++++++
+ tests/test_schedule.py      |  79 ++++++++++++++++++++--
+ tests/test_slack_adapter.py |  32 +++++++++
+ tests/test_threads.py       | 129 +++++++++++++++++++++++++++++++++++-
+ 17 files changed, 508 insertions(+), 33 deletions(-)
+
+diff --git a/README.md b/README.md
+index 8352bc1..3e9d455 100644
+--- a/README.md
++++ b/README.md
+@@ -14,7 +14,7 @@ directions). Adapters live one directory per platform, all implementing
+ | Adapter | State |
+ |---|---|
+ | `fake` | in-memory contract adapter — drives the quickstart dry-run and the fault-injection tests |
+-| `slack` | read-only Web API polling (poll / replies / resolve / health) — thread replies are fetched for open asks so an in-thread answer closes them; no send path at any layer |
++| `slack` | read-only Web API polling (poll / replies / thread_summary / resolve / health) — thread replies are fetched for open asks so an in-thread answer closes them, and a polled parent's own thread summary closes a visibly answered ask at ingest; no send path at any layer |
+ | `slack_socket` | Socket Mode push ingestion — read-only, legitimized by a continuous push-vs-poll parity watch |
+ | `telegram` | read-only bot-API polling — the first non-Slack platform; no history API upstream, so one destructive read per poll at the committed cursor, one chat per instance, no send path at any layer |
+ | `email` | read-only IMAP polling (Outlook or any RFC-3501 server) — identity is the Message-ID (a non-orderable string, which store and parity handle end to end), ordering is mailbox UID order, threading from References/In-Reply-To; every select is EXAMINE and every fetch BODY.PEEK, so polling never marks mail seen |
+diff --git a/channels/CONTRACT.md b/channels/CONTRACT.md
+index b148cd2..bb87c3f 100644
+--- a/channels/CONTRACT.md
++++ b/channels/CONTRACT.md
+@@ -36,6 +36,7 @@ demands**: a missing optional method changes what the engine can prove, not whet
+ | Method | Why, and what is lost without it |
+ |---|---|
+ | `retrievable_ts(channel, oldest?, latest?) -> set[str]` | Every timestamp the platform will serve **right now** — the third opinion `core/parity.py` needs. The incumbent oracle is an *archive*, not ground truth: it holds messages the platform has since deleted, and the engine, which can only fetch what the API serves, then gets blamed for "losing" them. Measured 2026-08-26 on the first live R8 window: 342 of 507 oracle rows in one channel were no longer served (one app's deleted burst), while the engine held 100% of retrievable history. Without this method the differ is **fail-closed** — every miss counts as a loss — so parity can never go green on a channel with any deleted history. The snapshot must be as gap-free as `poll()`: a truncated snapshot marks still-served messages "deleted upstream", which is the one direction that hides a real defect, so raise rather than under-report. An adapter without this method is **declared by name** rather than silently degraded: `core/doctor.py`'s `parity-snapshot` check and `python3 -m core.parity --candidate-adapter <type>` both say which verdicts (`UNRETRIEVABLE`, `ORACLE_MISSED`) are unavailable and why, so a permanently fail-closed run (push surfaces like `slack_socket`; any Telegram bot) reads as a missing capability, not a read-path defect. |
++| `thread_summary(message) -> {reply_count, repliers, latest_reply} \| None` | What one polled row says about the thread under it, read back from the row the adapter itself normalized: Slack serves a thread PARENT on `conversations.history` with `reply_count`, `reply_users` (the repliers, up to the few it names) and `latest_reply`, and the first poll of a channel serves every parent that way. `core/threads.py answered_from_summary()` ties an open ask whose summary names a replier other than the asker, at ingest and with no platform call (`threaded_is_answered`, on by default) — measured on the aws-do-agent integration 2026-10-31, where asks anyone could see answered on the platform read UNANSWERED until the bounded `replies()` sweep reached them. None for a row with no replies on it and for a reply row (the summary belongs to the parent); `repliers` empty when the platform counted replies but named nobody, which ties nothing (a replier the platform did not name is a guess). An adapter without this method is read as **cannot see a thread summary** (it yields None), never as "no thread"; the sweep stays the route for a thread that grows after its parent was polled. The shipped `fake` and `slack` adapters expose it. |
+ | `replies(channel_id, thread_ts, oldest?) -> list[message]` | Every reply under one thread newer than `oldest` (exclusive), oldest-first, in the normalized shape below, **never the parent**, all pages or raise. History polling does not serve thread replies on Slack (a parent arrives with a `reply_count` and nothing else), so without this method an in-thread answer never reaches the engine — measured on the aws-do-agent integration 2026-10-12, where every ask the agent had answered in-thread read UNANSWERED. `core/threads.py` sweeps the open asks' threads each scheduler cycle, journals the replies like any other message, and ties an ask to the first reply from someone other than the asker. An adapter without this method is read by the sweep as **cannot see answers** (it yields None), never as "no answers"; the reference scheduler then has no in-thread route to answered for that channel — the write surface's Reply remains the other route wherever the adapter can send. The shipped `fake` and `slack` adapters expose it. |
+ 
+ An adapter that watches a **fixed, config-derived channel set** (both shipped real adapters
+diff --git a/channels/fake/adapter.py b/channels/fake/adapter.py
+index 33f9b50..b34433c 100644
+--- a/channels/fake/adapter.py
++++ b/channels/fake/adapter.py
+@@ -53,6 +53,27 @@ class Adapter:
+         out.sort(key=lambda m: float(m["ts"]))
+         return out
+ 
++    def thread_summary(self, message):
++        """Optional capability (channels/CONTRACT.md): what a polled row says about the
++        thread under it - reply_count, the repliers in reply order, the newest reply's
++        ts - or None for a row without a thread. The fake derives it from the messages
++        it holds; a real adapter reads the summary its platform puts on the parent row
++        (Slack: reply_count / reply_users / latest_reply on a history entry)."""
++        if message.get("thread_id"):
++            return None
++        replies = [m for m in self.messages
++                   if m.get("channel_id") == message.get("channel_id")
++                   and m.get("thread_id") == message.get("ts")]
++        if not replies:
++            return None
++        replies.sort(key=lambda m: float(m["ts"]))
++        repliers = []
++        for m in replies:
++            if m.get("sender_id") not in repliers:
++                repliers.append(m.get("sender_id"))
++        return {"reply_count": len(replies), "repliers": repliers,
++                "latest_reply": replies[-1]["ts"]}
++
+     def send(self, channel_id, text, key=None, thread_id=None):
+         """Placement is recorded, not ignored: an adapter that accepts thread_id and
+         drops it posts in the main channel while reporting success, which is the one
+diff --git a/channels/slack/README.md b/channels/slack/README.md
+index 5a11a99..84f76d8 100644
+--- a/channels/slack/README.md
++++ b/channels/slack/README.md
+@@ -17,6 +17,8 @@ invariant (`tests/test_slack_adapter.py`), not a promise:
+ | `resolve(ref)` | id → name via `conversations.info` / `users.info`; name → id by paging `conversations.list` / `users.list`. Unresolvable refs raise. |
+ | `health()` | `auth.test`. Can FAIL (bad token → `auth_ok: false`; network down → `reachable: false`) and reports any active 429 hold in `detail`. |
+ | `capabilities()` | `{read: true, history: true, search: false, send: false, react: false, threads: false}` — honest, not aspirational. |
++| `replies(channel_id, thread_ts, oldest?)` | `conversations.replies`, all pages or fail loudly, never the parent — the optional capability `core/threads.py` sweeps the open asks' threads through (ENH-30). |
++| `thread_summary(message)` | no call: the `reply_count` / `reply_users` / `latest_reply` a history PARENT carries, read back from the normalized row's `raw` — the optional capability that lets the engine tie a visibly answered ask at ingest (`threaded_is_answered`). None for a row without replies and for a reply row. |
+ 
+ Rate limits follow contract rule 3: a 429 raises `core.ratelimit.RateLimited` with the
+ platform's exact `Retry-After` and the method it hit; the engine's `(instance, method)`
+diff --git a/channels/slack/adapter.py b/channels/slack/adapter.py
+index 4fb6f59..c1eef4b 100644
+--- a/channels/slack/adapter.py
++++ b/channels/slack/adapter.py
+@@ -295,6 +295,33 @@ class Adapter:
+                                "drop the rest of the thread")
+         return out
+ 
++    # ---- optional capability: the parent row's thread summary (channels/CONTRACT.md) ----
++    @staticmethod
++    def thread_summary(message):
++        """What one polled row says about the thread under it, or None.
++
++        conversations.history serves a thread PARENT with the platform's own summary of
++        its thread - reply_count, reply_users (the repliers, the few Slack names) and
++        latest_reply - and the first poll of a channel serves every parent that way.
++        _normalize keeps the whole row in `raw`; this reads the summary back, so the
++        engine can tie an ask that visibly has a thread without a conversations.replies
++        call (core/threads.py answered_from_summary). None for a row with no replies on
++        it, for a reply (its thread_id is set), and for a row this adapter did not shape.
++        """
++        raw = message.get("raw")
++        if isinstance(raw, str):
++            try:
++                raw = json.loads(raw)
++            except ValueError:
++                return None
++        if not isinstance(raw, dict) or message.get("thread_id"):
++            return None
++        if not raw.get("reply_count"):
++            return None
++        return {"reply_count": int(raw["reply_count"]),
++                "repliers": [u for u in (raw.get("reply_users") or ()) if u],
++                "latest_reply": raw.get("latest_reply")}
++
+     # ---- optional capability: the platform snapshot (channels/CONTRACT.md) ------
+     def retrievable_ts(self, channel, oldest=None, latest=None):
+         """Every ts the platform will serve for this channel RIGHT NOW.
+diff --git a/core/README.md b/core/README.md
+index 8958b8b..4fb3a10 100644
+--- a/core/README.md
++++ b/core/README.md
+@@ -29,7 +29,7 @@ so a new channel type is a directory drop with zero core changes.
+ | `reconfig.py` | staged configuration changes — the ENH-28 trust shape applied to settings.json: an edit op builds a candidate, `stage()` validates it with the engine's OWN loader (the refusal the adopter would otherwise meet at startup) and records the exact old→new diff durably, and only `apply()` — a human click on that exact diff, stale-checked against the file and re-validated against the current environment — writes it (atomically); discard is terminal and kept; policy WIDENINGS are detected and carried on the staged row; auth values are env-var NAME references, with a pasted secret refused unstored and unechoed; a new channel denies by default by OMITTING the policy key, so the loader's own DENY stays the single copy of that rule; there is no hot-reload — `RELOAD_TRUTH` states that a running scheduler/watcher must be restarted |
+ | `schedule.py` | the reference scheduler loop (probe → classify → journal → route → owed) with the incumbent's loop bugs structurally fixed: a single-instance guard per state directory (an OS-held sqlite lock, so a crashed holder leaves no stale lockfile), the cursor committed only after the journal (a crash duplicates, never loses), idle backoff that can never suppress owed work (the measured 8h17m stall), and edge-triggered escalation of unattended work; one thread-sweep budget per adapter per cycle, charged by attempt (refused fetches too), spent across its channels with one call reserved per waiting channel and the bulk moving to the channel that waited, any channel a cycle skipped (a 429, more channels than calls) swept first next cycle and named with its cause in the summary, window and order durable in the store so `--once` runs keep them (review D2/F1-F4: config order starved every channel behind a backlog, silently; the position-based window can still stick on one ask at capacity — COMMS-79 item 18) |
+ | `slo.py` | detection-latency SLO with the completeness poll as ground truth: p50/p90 of push detection latency and of push's lead over the poll, failing on a budget breach or on any poll-confirmed message push never delivered (the incumbent's "12.1min → ~1min" headline only measured its own cron cadence); an empty or unmeasurable comparison is an error, never a pass |
+-| `threads.py` | in-thread answers close open asks (ENH-30): each scheduler cycle sweeps the open asks' threads through the adapter's optional `replies()`, stores and returns the new replies for journaling, and ties an ask to the FIRST reply from someone other than the asker (`Journal.mark_responded`, key `thread-reply:<ts>`) — measured on the aws-do-agent integration 2026-10-12, where `responded_at` had no production caller and the Slack adapter polled `conversations.history` only (which never serves a thread reply), so every answered ask read UNANSWERED forever; one budget per adapter per cycle spent across its channels, a window that rotates through the open asks (none starves while the window is wider than the arrival rate — it is a position in the newest-first list, so at ~1 call per cycle with a new ask every cycle it can stick on one ask: COMMS-79 item 18), one call per thread root, a 429 stops that adapter's sweeping for the cycle and is reported, a platform error on one thread is recorded by ask and skipped (never a crash loop), a reply that is itself an ask or comes from an unattributed sender answers nothing, and an adapter without `replies()` yields None (declared absent, never "nothing new") |
++| `threads.py` | in-thread answers close open asks (ENH-30): each scheduler cycle sweeps the open asks' threads through the adapter's optional `replies()`, stores and returns the new replies for journaling, and ties an ask to the FIRST reply from someone other than the asker (`Journal.mark_responded`, key `thread-reply:<ts>`) — measured on the aws-do-agent integration 2026-10-12, where `responded_at` had no production caller and the Slack adapter polled `conversations.history` only (which never serves a thread reply), so every answered ask read UNANSWERED forever; one budget per adapter per cycle spent across its channels, a window that rotates through the open asks (none starves while the window is wider than the arrival rate — it is a position in the newest-first list, so at ~1 call per cycle with a new ask every cycle it can stick on one ask: COMMS-79 item 18), one call per thread root, a 429 stops that adapter's sweeping for the cycle and is reported, a platform error on one thread is recorded by ask and skipped (never a crash loop), a reply that is itself an ask or comes from an unattributed sender answers nothing, and an adapter without `replies()` yields None (declared absent, never "nothing new"); `answered_from_summary()` is the route at INGEST (threaded_is_answered, 2026-10-31): the polled parent's own thread summary, read through the adapter's optional `thread_summary()`, ties an open ask whose summary names a replier other than the asker with no platform call (key `thread-reply:summary:<replier>`) — the first poll of a channel serves every answered parent that way, so a backfilled backlog closes in one cycle instead of after the sweep's window reaches it; the setting also lets any foreign in-thread reply answer in the sweep (a follow-up question stays owed on its own row), and `false` restores the sweep-only route with the review-F7 verdict |
+ | `store.py` | sqlite message store: explicit pinned schema (unknown and missing fields refused), idempotent re-ingest, first-arrival stamping (first-write-wins, so re-polls never move it), per-(instance, channel) cursor persistence |
+ 
+ Each module's docstring carries the measured incident it exists to prevent — read it before
+diff --git a/core/config.py b/core/config.py
+index d00e97e..b42e0f4 100644
+--- a/core/config.py
++++ b/core/config.py
+@@ -46,7 +46,7 @@ VALID_POLICIES = ("never", "staged", "direct")
+ _TOP_KEYS = frozenset(("engine", "instances"))
+ _ENGINE_KEYS = frozenset(("state_dir", "channels_dir", "store", "journal", "outbox"))
+ _INSTANCE_KEYS = frozenset(("name", "adapter", "channels", "principals", "auth",
+-                            "taxonomy", "escalate_ambiguous"))
++                            "taxonomy", "escalate_ambiguous", "threaded_is_answered"))
+ _CHANNEL_KEYS = frozenset(("id", "label", "poll_interval_s", "reply_policy",
+                            "thread_reply_policy", "triggers"))
+ 
+@@ -109,6 +109,12 @@ class InstanceConfig:
+     # (owed:operator) instead of only logging them. Default off: the safe direction is
+     # unchanged behaviour plus the journal's visible hedge count.
+     escalate_ambiguous: bool = False
++    # threaded_is_answered (2026-10-31): a message that has a thread is answered — tied
++    # at ingest from the polled row's own thread summary, and in the sweep by any reply
++    # from someone other than the asker, a question included (core/schedule.Source).
++    # Default on: the operator's measured expectation of the dashboard. false restores
++    # the sweep-only route with the review-F7 verdict (a follow-up question is no answer).
++    threaded_is_answered: bool = True
+ 
+     def policies(self) -> dict:
+         """target id -> policy, for core.outbox. Absent targets are denied by default."""
+@@ -340,11 +346,18 @@ def from_dict(raw: dict, base_dir: str | Path, env: dict | None = None) -> Engin
+             raise ConfigError(
+                 f"instance {name!r}: escalate_ambiguous must be a JSON boolean "
+                 f"(true/false), got {esc!r}")
++        threaded = spec.get("threaded_is_answered", True)
++        if not isinstance(threaded, bool):
++            # The same footgun the other way: a quoted "false" would keep the route ON
++            # for the adopter who typed the word off.
++            raise ConfigError(
++                f"instance {name!r}: threaded_is_answered must be a JSON boolean "
++                f"(true/false), got {threaded!r}")
+         instances.append(InstanceConfig(
+             name=name, adapter=adapter, channels=tuple(channels),
+             principals=tuple(spec.get("principals", ())), auth=auth,
+             taxonomy=spec.get("taxonomy", {}) or {},
+-            escalate_ambiguous=esc))
++            escalate_ambiguous=esc, threaded_is_answered=threaded))
+ 
+     if not instances:
+         raise ConfigError("no instances configured — the engine would poll nothing")
+diff --git a/core/schedule.py b/core/schedule.py
+index cdb9d4c..9ce0568 100644
+--- a/core/schedule.py
++++ b/core/schedule.py
+@@ -117,6 +117,14 @@ class Source:
+     # only logging them. Per source, like the taxonomy: whether hedges deserve human
+     # eyes depends on the channel's vocabulary and traffic, not on the engine.
+     escalate_ambiguous: bool = False
++    # threaded_is_answered (2026-10-31): a message that has a thread is answered. ON: an
++    # open ask whose polled row shows a reply from someone other than the asker is tied
++    # at ingest (core/threads.answered_from_summary, no platform call), and in the sweep
++    # any such reply answers, a question included (the follow-up is owed on its own
++    # row). OFF: the sweep is the one in-thread route and a reply that is itself an ask
++    # does not answer (review F7). Per source, like the taxonomy: what counts as an
++    # answer in a 1:1 channel with an agent differs from a team's support channel.
++    threaded_is_answered: bool = True
+ 
+ 
+ class Scheduler:
+@@ -192,6 +200,16 @@ class Scheduler:
+                 # journal absorbs the duplicates; the swapped order loses the tail
+                 # of the batch forever (the incumbent's 24-auto-reconcile seam).
+                 fresh += self._journal_and_route(ch, mine, src)
++                if src.threaded_is_answered:
++                    # An ask that visibly has a thread — its own polled row names a
++                    # replier other than the asker — is answered here, at ingest, with
++                    # no replies() call (threaded_is_answered). Before the cursor
++                    # commits, like the journaling: a crash between the two re-polls
++                    # the row and ties it again. The sweep below serves the asks whose
++                    # thread grew after their row was polled (a cursored history poll
++                    # never serves a parent twice).
++                    ties = threads.answered_from_summary(src.adapter, self.journal, ch, mine)
++                    answered += len(ties or ())
+                 self._commit_cursor(src.name, ch, cursor, new_cursor)
+                 polled += len(mine)
+             # ENH-30: the open asks' threads. A history poll never serves a thread
+@@ -227,14 +245,20 @@ class Scheduler:
+                     continue
+                 swept_now.append(ch)
+                 allow = max(1, budget - (len(order) - 1 - i))
++                # A reply that classifies as an ask of its own is a new question,
++                # never the answer (review F7); the source's vocabulary decides —
++                # unless the source counts a message that has a thread as answered
++                # (threaded_is_answered): then any reply from someone else answers,
++                # and the follow-up question is owed on its own row.
++                is_answer = None
++                if not src.threaded_is_answered:
++                    is_answer = lambda m, _src=src: classify(  # noqa: E731
++                        m.get("text") or "", _src.taxonomy,
++                        attachments=m.get("attachments")).kind not in ACTIONABLE_KINDS
+                 swept = threads.sweep(
+                     src.adapter, self.store, self.journal, ch, max_threads=allow,
+                     start=self.store.sweep_start_get(src.name, ch),
+-                    # A reply that classifies as an ask of its own is a new question,
+-                    # never the answer (review F7); the source's vocabulary decides.
+-                    is_answer=lambda m, _src=src: classify(
+-                        m.get("text") or "", _src.taxonomy,
+-                        attachments=m.get("attachments")).kind not in ACTIONABLE_KINDS)
++                    is_answer=is_answer)
+                 if swept is not None:
+                     # Charged by ATTEMPT: a refused fetch cost the platform a call too
+                     # (review F2 — an all-errors channel was charged nothing, and the
+diff --git a/core/threads.py b/core/threads.py
+index 009b265..b0cc37c 100644
+--- a/core/threads.py
++++ b/core/threads.py
+@@ -35,6 +35,17 @@ re-sighting). The first version used the newest STORED reply as the floor — bu
+ is written inside the sweep and the journal only afterwards by the caller, so a crash between
+ the two left a stored reply that was never fetched again and never journaled: the inverted
+ dual-write the scheduler forbids for poll(), found by the independent review of 89fd0fa.
++
++A second route to answered, at INGEST (threaded_is_answered, 2026-10-31): a history row of
++a thread parent carries the platform's own summary of the thread under it, and the first
++poll of a channel serves every parent that way. `answered_from_summary()` reads it through
++the adapter's optional `thread_summary(message)` and ties an open ask whose summary names a
++replier other than the asker — no platform call, so the sweep's window and a 429 no longer
++hold a visibly answered ask open. Measured on the aws-do-agent integration (operator,
++2026-10-31): asks whose thread anyone could see on the platform read UNANSWERED for as long
++as the bounded sweep took to reach them, and the dashboard kept "qualifying them as
++unanswered". The sweep stays the route for a thread that grows AFTER its parent was polled:
++a cursored history poll never serves a parent twice.
+ """
+ from __future__ import annotations
+ 
+@@ -79,6 +90,50 @@ def answered_by(asker: str | None, replies, is_answer=None) -> dict | None:
+     return None
+ 
+ 
++def answered_from_summary(adapter, journal, channel: str, messages) -> list | None:
++    """Tie the open asks among `messages` that visibly have a thread — without a call.
++
++    For each polled TOP-LEVEL message whose journal row is an open ask (ACTIONABLE_KINDS),
++    the adapter's `thread_summary(message)` is asked what the row says about its thread:
++    `{reply_count, repliers, latest_reply}`, or None. The rule is the sweep's, as far as
++    a summary lets it be applied: the FIRST replier other than the asker answers (response
++    key `thread-reply:summary:<replier>`, so the dashboard counts it among the thread
++    answers); a thread whose only repliers are the asker stays open; the adapters'
++    unattributed placeholder answers nothing; a count with no attributable replier stays
++    open — a replier the platform did not name would be a guess, and the engine never
++    guesses. The replies' text is not in view here, so the sweep's `is_answer` verdict
++    cannot be applied; the setting that turns this route on turns that verdict off too
++    (core/schedule.py: a reply that is itself a question still answers, and is owed on
++    its own row). The tie is stamped at the poll that sighted the summary (`at` default):
++    the reply's own platform time predates the row's first sighting, and a tie stamped
++    there would read every such ask as EDITED AFTER RESPONSE.
++
++    Returns [(ask_ts, replier), ...]; None when the adapter has no `thread_summary` —
++    the capability is absent, which the caller must read as "cannot conclude", never as
++    "no thread" (the same rule as sweep()).
++    """
++    if not hasattr(adapter, "thread_summary"):
++        return None
++    ties = []
++    for m in messages:
++        if m.get("thread_id"):
++            continue                        # a reply says nothing about its own thread
++        row = journal.get(channel, m["ts"])
++        if row is None or row["responded_at"] is not None or row["kind"] not in ACTIONABLE_KINDS:
++            continue
++        summary = adapter.thread_summary(m)
++        if not summary:
++            continue
++        asker = row["sender_id"]
++        repliers = [r for r in (summary.get("repliers") or ())
++                    if r and r != asker and r not in UNATTRIBUTED_SENDERS]
++        if not repliers:
++            continue
++        journal.mark_responded(channel, str(m["ts"]), f"thread-reply:summary:{repliers[0]}")
++        ties.append((str(m["ts"]), repliers[0]))
++    return ties
++
++
+ def open_asks_for(journal, channel: str) -> list:
+     """This channel's open ASKS (ACTIONABLE_KINDS only), newest first — the one list the
+     sweep works from, exposed so the cycle can tell a channel the budget skipped that
+diff --git a/docs/QUICKSTART.md b/docs/QUICKSTART.md
+index 3a4141a..4e2b09d 100644
+--- a/docs/QUICKSTART.md
++++ b/docs/QUICKSTART.md
+@@ -281,19 +281,28 @@ the open *ask* backlog: rows whose kind is one of `core/classify.ACTIONABLE_KIND
+ them. A STATEMENT — a status remark, a join notice — owes nobody an answer and is never
+ listed there (it still counts as a message, and the Journal tab's kind table shows it);
+ a row with no recorded kind is shown as *unclassified* rather than hidden. An ask
+-becomes answered in exactly two ways, both recorded in `journal.db` with a response key
++becomes answered in three ways, each recorded in `journal.db` with a response key
+ naming what answered: a reply **sent from the write surface** with the ask's Reply
+ button (the outbox key, tied the moment the send is proven on the target — staging
+-alone never ties), or a reply **inside the ask's thread from someone other than the
++alone never ties); a reply **inside the ask's thread from someone other than the
+ asker**, which the reference scheduler sweeps every cycle through the adapter's
+ optional `replies()` (`core/threads.py`; the shipped `fake` and `slack` adapters have
+-it). A top-level reply posted in the channel by someone else cannot be attributed to the
++it); or, **at ingest**, the polled row's own summary of the thread under it — Slack
++serves a thread parent with its `reply_count` and `reply_users`, and the first poll of a
++channel serves every parent that way — read through the adapter's optional
++`thread_summary()` and tied when it names a replier other than the asker, with no
++platform call (key `thread-reply:summary:<replier>`). That third route, and the rule that
++in the sweep any reply from someone else answers, a question included, is the instance
++setting `threaded_is_answered` (default `true`: a message that has a thread is answered;
++`false` keeps the sweep as the one in-thread route and refuses a reply that is itself an
++ask as the answer). A top-level reply posted in the channel by someone else cannot be attributed to the
+ ask it answers, so it leaves the ask open — answer in the thread, or from this surface's
+ Reply button, which ties the ask itself wherever the reply lands. "Responded" means
+ exactly that — somebody else replied in the thread, or you sent an answer — not
+ "resolved": a third party's "+1" closes an ask too, and the Journal tab counts those
+ apart from answers sent from here. The scheduler's cycle line reports `answered=N` — the
+-in-thread ties the sweep made that cycle; answers sent from the surface are tied by the
++ties made that cycle, at ingest from a polled parent's thread summary and in the thread
++sweep; answers sent from the surface are tied by the
+ surface and never appear in that count — and
+ one line per channel whenever the sweep was rate-limited, truncated, or refused by the
+ platform for one ask (a deleted ask answers `thread_not_found` forever; it is reported
+@@ -350,14 +359,21 @@ surface says so instead of implying one.
+ 
+ ## Honest limits
+ 
+-- **Answered state has exactly two routes.** An ask is marked answered by a reply sent
++- **Answered state has exactly three routes.** An ask is marked answered by a reply sent
+   from the write surface's Reply button (tied by the ask itself, in its thread or
+-  top-level as the channel's thread policy allows) or by an in-thread reply from someone
+-  other than the asker, swept each scheduler cycle. "Responded" means exactly that, not
++  top-level as the channel's thread policy allows), by an in-thread reply from someone
++  other than the asker, swept each scheduler cycle, or — with the instance setting
++  threaded_is_answered on, the default — at ingest, when the polled row's own thread
++  summary (the adapter's optional thread_summary(), from Slack's reply_users on a history
++  parent) names a replier other than the asker; the summary carries no text, so that route
++  cannot tell a follow-up question from an answer, and with the setting on the sweep
++  counts any such reply too. "Responded" means exactly that, not
+   "resolved": a third party's "+1" closes an ask too, and the dashboard counts
+   thread-closed asks apart from answers sent from here. A reply posted top-level in the
+   channel by anyone else is stored and listed but cannot be tied to the ask, and the
+-  engine never guesses. Adapters with neither `replies()` nor send capability — today
++  engine never guesses; a thread that grows after its parent was polled reaches the engine
++  through the sweep alone, since a cursored history poll never serves a parent twice.
++  Adapters with neither `replies()` nor send capability — today
+   `slack_socket`, `telegram` and `email` — have no route to answered at all: their asks
+   stay UNANSWERED until a send-capable path exists for that platform.
+ - **The thread sweep spends platform calls.** Each open ask costs one
+diff --git a/scripts/scheduler.py b/scripts/scheduler.py
+index 384c812..0f89b08 100644
+--- a/scripts/scheduler.py
++++ b/scripts/scheduler.py
+@@ -121,7 +121,8 @@ def main(argv=None):
+     sources = [Source(name=inst.name, adapter=adapters[inst.name],
+                       channels=tuple(ch.id for ch in inst.channels),
+                       taxonomy=Taxonomy.from_config(inst.taxonomy),
+-                      escalate_ambiguous=inst.escalate_ambiguous)
++                      escalate_ambiguous=inst.escalate_ambiguous,
++                      threaded_is_answered=inst.threaded_is_answered)
+                for inst in cfg.instances]
+     # Base cadence: the fastest cadence any channel asked for; backoff may widen it
+     # (never past 16x), owed work restores it (core/schedule.py, R3).
+diff --git a/tests/mutation_check.sh b/tests/mutation_check.sh
+index c2bd61a..80e4a1c 100755
+--- a/tests/mutation_check.sh
++++ b/tests/mutation_check.sh
+@@ -1452,7 +1452,7 @@ run_mutation "schedule: run() no longer acquires the single-instance guard" \
+ # cursor first means a crash silently loses the tail of the batch, with no reconciler.
+ run_mutation "schedule: cursor committed before the journal" \
+   "core/schedule.py" \
+-  "('                fresh += self._journal_and_route(ch, mine, src)\n                self._commit_cursor(src.name, ch, cursor, new_cursor)', '                self._commit_cursor(src.name, ch, cursor, new_cursor)\n                fresh += self._journal_and_route(ch, mine, src)')" \
++  "('                fresh += self._journal_and_route(ch, mine, src)\n                if src.threaded_is_answered:', '                self._commit_cursor(src.name, ch, cursor, new_cursor)\n                fresh += self._journal_and_route(ch, mine, src)\n                if src.threaded_is_answered:')" \
+   "test_schedule"
+ 
+ # ENH-6/R3 — the 8h17m bug verbatim: backoff self-gates exactly when owed work stalls.
+@@ -2610,11 +2610,69 @@ run_mutation "threads: the unattributed placeholder sender answers an ask" \
+   "('        if not sender or sender == asker or sender in UNATTRIBUTED_SENDERS:', '        if not sender or sender == asker:')" \
+   "test_threads"
+ 
+-run_mutation "schedule: the cycle sweeps without the classifier's verdict" \
++run_mutation "schedule: the cycle sweeps without the classifier's verdict (threaded_is_answered off)" \
+   "core/schedule.py" \
+-  "('                    is_answer=lambda m, _src=src: classify(\n                        m.get(\"text\") or \"\", _src.taxonomy,\n                        attachments=m.get(\"attachments\")).kind not in ACTIONABLE_KINDS)', '                    is_answer=None)')" \
++  "('                if not src.threaded_is_answered:\n                    is_answer = lambda m, _src=src: classify(  # noqa: E731', '                if False:\n                    is_answer = lambda m, _src=src: classify(  # noqa: E731')" \
+   "test_schedule"
+ 
++# threaded_is_answered (2026-10-31) — a message that has a thread is answered: the tie at ingest
++# from the polled parent's thread summary, the setting that turns it on, the sweep's verdict it
++# turns off, the adapter capability it reads, and the config key that carries it.
++run_mutation "schedule: the cycle never ties from the thread summary" \
++  "core/schedule.py" \
++  "('                    ties = threads.answered_from_summary(src.adapter, self.journal, ch, mine)\n                    answered += len(ties or ())', '                    pass')" \
++  "test_schedule"
++
++run_mutation "schedule: the ingest tie ignores the source's setting" \
++  "core/schedule.py" \
++  "('                if src.threaded_is_answered:\n                    # An ask that visibly has a thread', '                if True:\n                    # An ask that visibly has a thread')" \
++  "test_schedule"
++
++run_mutation "schedule: the sweep keeps the classifier's verdict with the route on" \
++  "core/schedule.py" \
++  "('                is_answer = None\n                if not src.threaded_is_answered:', '                is_answer = None\n                if True:')" \
++  "test_schedule"
++
++run_mutation "threads: the asker alone in the thread summary counts as the answer" \
++  "core/threads.py" \
++  "('                    if r and r != asker and r not in UNATTRIBUTED_SENDERS]', '                    if r and r not in UNATTRIBUTED_SENDERS]')" \
++  "test_threads"
++
++run_mutation "threads: the unattributed placeholder in the summary answers an ask" \
++  "core/threads.py" \
++  "('                    if r and r != asker and r not in UNATTRIBUTED_SENDERS]', '                    if r and r != asker]')" \
++  "test_threads"
++
++run_mutation "threads: an adapter without thread_summary() reads as 'no thread'" \
++  "core/threads.py" \
++  "('    if not hasattr(adapter, \"thread_summary\"):\n        return None', '    if not hasattr(adapter, \"thread_summary\"):\n        return []')" \
++  "test_threads"
++
++run_mutation "threads: the summary route ties STATEMENTs and answered asks again" \
++  "core/threads.py" \
++  "('        if row is None or row[\"responded_at\"] is not None or row[\"kind\"] not in ACTIONABLE_KINDS:', '        if row is None:')" \
++  "test_threads"
++
++run_mutation "threads: the summary tie never marks the ask responded" \
++  "core/threads.py" \
++  "('        journal.mark_responded(channel, str(m[\"ts\"]), f\"thread-reply:summary:{repliers[0]}\")', '        pass')" \
++  "test_threads"
++
++run_mutation "slack: thread_summary drops the repliers" \
++  "channels/slack/adapter.py" \
++  "('                \"repliers\": [u for u in (raw.get(\"reply_users\") or ()) if u],', '                \"repliers\": [],')" \
++  "test_slack_adapter"
++
++run_mutation "config: threaded_is_answered is read as always on" \
++  "core/config.py" \
++  "('        threaded = spec.get(\"threaded_is_answered\", True)', '        threaded = True')" \
++  "test_portability"
++
++run_mutation "config: a quoted threaded_is_answered is accepted" \
++  "core/config.py" \
++  "('        if not isinstance(threaded, bool):', '        if False:')" \
++  "test_portability"
++
+ # review F8 — one platform call per thread root, one budget per adapter, 429 stops the source.
+ run_mutation "threads: every ask under one root issues its own platform call" \
+   "core/threads.py" \
+diff --git a/tests/test_docs.py b/tests/test_docs.py
+index c93fc66..2a84aa7 100644
+--- a/tests/test_docs.py
++++ b/tests/test_docs.py
+@@ -920,10 +920,11 @@ class ConfigSurfaceDocTest(unittest.TestCase):
+ 
+     def test_what_unanswered_means_and_how_it_closes_is_stated(self):
+         """ENH-30: the dashboard's UNANSWERED is the open ASK backlog, and an ask closes
+-        in exactly two ways — a reply sent from the surface, or an in-thread reply from
+-        someone else. The one limit an operator will trip over is that a TOP-LEVEL reply
+-        cannot be attributed and leaves the ask open; the doc must keep saying so, or
+-        "I answered and it still shows unanswered" is the next meeting note."""
++        in exactly three ways — a reply sent from the surface, an in-thread reply from
++        someone else, or (threaded_is_answered, 2026-10-31) the polled parent's own thread
++        summary naming such a replier. The one limit an operator will trip over is that a
++        TOP-LEVEL reply cannot be attributed and leaves the ask open; the doc must keep
++        saying so, or "I answered and it still shows unanswered" is the next meeting note."""
+         self.assertIn("ACTIONABLE_KINDS", self.quickstart,
+                       "the doc no longer names the one definition of an ask")
+         self.assertIn("staging\nalone never ties", self.quickstart,
+@@ -934,8 +935,10 @@ class ConfigSurfaceDocTest(unittest.TestCase):
+                       self.quickstart,
+                       "the doc dropped the top-level-reply limit — the one answered-state "
+                       "surprise an operator meets on day one")
+-        self.assertIn("Answered state has exactly two routes.", self.quickstart,
++        self.assertIn("Answered state has exactly three routes.", self.quickstart,
+                       "the honest-limits entry for answered state is gone")
++        self.assertIn("threaded_is_answered", self.quickstart,
++                      "the doc no longer names the setting that decides what a thread means")
+ 
+     def test_the_adapters_with_no_route_to_answered_are_named_from_the_code(self):
+         """The limits entry names the adapters whose asks can never close: no replies()
+@@ -948,9 +951,10 @@ class ConfigSurfaceDocTest(unittest.TestCase):
+             if not hasattr(load_adapter_class(ROOT / "channels", name), "replies")
+             and not hasattr(load_adapter_class(ROOT / "channels", name), "send"))
+         self.assertTrue(stranded, "the derivation found nothing — it is broken, not the docs")
+-        section = self.quickstart.split("Answered state has exactly two routes.", 1)[1]
++        section = self.quickstart.split("Answered state has exactly three routes.", 1)[1]
+         section = section.split("\n- **", 1)[0]
+-        named = sorted(set(re.findall(r"`([a-z_]+)`", section)) - {"replies", "SWEEP_MAX"})
++        named = sorted(set(re.findall(r"`([a-z_]+)`", section))
++                       - {"replies", "SWEEP_MAX", "thread_summary", "threaded_is_answered"})
+         self.assertEqual(named, stranded,
+                          f"the doc names {named} as having no route to answered; the code "
+                          f"says {stranded}")
+diff --git a/tests/test_portability.py b/tests/test_portability.py
+index 0c7f158..207ad6c 100644
+--- a/tests/test_portability.py
++++ b/tests/test_portability.py
+@@ -200,6 +200,29 @@ class ConfigTest(unittest.TestCase):
+             from_dict(d, base_dir=self.base, env={"ADOPTER_TOKEN": "x"})
+         self.assertIn("escalate_ambiguous", str(ctx.exception))
+ 
++    def test_threaded_is_answered_defaults_on(self):
++        """A message that has a thread is answered: the operator's measured expectation
++        of the dashboard (aws-do-agent, 2026-10-31) is the shipped default."""
++        c = from_dict(self.cfg_dict(), base_dir=self.base, env={"ADOPTER_TOKEN": "x"})
++        self.assertIs(c.instance("adopter-workspace").threaded_is_answered, True)
++
++    def test_threaded_is_answered_is_read_from_the_instance(self):
++        d = self.cfg_dict()
++        d["instances"][0]["threaded_is_answered"] = False
++        c = from_dict(d, base_dir=self.base, env={"ADOPTER_TOKEN": "x"})
++        self.assertIs(c.instance("adopter-workspace").threaded_is_answered, False,
++                      "the key loads but configures nothing — the silently inert "
++                      "class ENH-17 exists to kill")
++
++    def test_a_quoted_threaded_is_answered_is_refused(self):
++        """"false" (a string) is truthy: accepted, it would keep the route ON for the
++        adopter who typed the word off."""
++        d = self.cfg_dict()
++        d["instances"][0]["threaded_is_answered"] = "false"
++        with self.assertRaises(ConfigError) as ctx:
++            from_dict(d, base_dir=self.base, env={"ADOPTER_TOKEN": "x"})
++        self.assertIn("threaded_is_answered", str(ctx.exception))
++
+     def test_missing_config_file_raises_clearly(self):
+         with self.assertRaises(ConfigError):
+             load(self.base / "nope.json")
+diff --git a/tests/test_schedule.py b/tests/test_schedule.py
+index 8d34d92..8c15e11 100644
+--- a/tests/test_schedule.py
++++ b/tests/test_schedule.py
+@@ -107,12 +107,13 @@ class SchedulerHarness(unittest.TestCase):
+         self.tmp.cleanup()
+ 
+     def scheduler(self, adapter, channels=("C1",), journal=None, lock_path=None,
+-                  escalate_ambiguous=False):
++                  escalate_ambiguous=False, threaded_is_answered=True):
+         return Scheduler(
+             store=self.store, journal=journal or self.journal, owed=self.owed,
+             escalator=self.escalator,
+             sources=[Source(name="inst", adapter=adapter, channels=tuple(channels),
+-                            escalate_ambiguous=escalate_ambiguous)],
++                            escalate_ambiguous=escalate_ambiguous,
++                            threaded_is_answered=threaded_is_answered)],
+             base_interval=self.BASE, max_interval=self.MAX, lock_path=lock_path,
+             clock=lambda: self.now,
+             sleep=self._sleep)
+@@ -653,6 +654,10 @@ class HistoryOnlyFake:
+         msgs, new_cursor = self.inner.poll(cursor)
+         return [m for m in msgs if not m.get("thread_id")], new_cursor
+ 
++    def thread_summary(self, message):
++        """Slack's shape too: a history parent carries the summary of its thread."""
++        return self.inner.thread_summary(message)
++
+     def replies(self, channel_id, thread_ts, oldest=None):
+         self.calls += 1
+         self.roots_swept.add(thread_ts)
+@@ -770,10 +775,12 @@ class ThreadSweepCycleTest(SchedulerHarness):
+         self.assertEqual(adapter.roots_swept, {f"{i}.0" for i in range(1, 2 * SWEEP_MAX + 1)},
+                          "asks beyond the newest window were never swept — starvation")
+ 
+-    def test_a_follow_up_question_in_the_thread_does_not_close_the_ask(self):
++    def test_a_follow_up_question_in_the_thread_does_not_close_the_ask_when_the_source_says_so(self):
++        """Review F7, kept behind threaded_is_answered=false: a follow-up question is a
++        new ask, never the answer."""
+         adapter = HistoryOnlyFake()
+         adapter.seed([msg("C1", "1.0", "where is the dashboard?")])
+-        sched = self.scheduler(adapter)
++        sched = self.scheduler(adapter, threaded_is_answered=False)
+         sched.cycle()
+         adapter.seed([msg("C1", "2.0", "and where are the logs?", sender_id="U_B",
+                           thread_id="1.0")])
+@@ -783,6 +790,70 @@ class ThreadSweepCycleTest(SchedulerHarness):
+                          {"msg@C1@1.0", "msg@C1@2.0"},
+                          "both questions are owed; the follow-up is an ask of its own")
+ 
++    def test_by_default_a_message_that_has_a_thread_is_answered_whatever_the_reply_says(self):
++        """threaded_is_answered (the default): the operator reads an ask with a reply
++        under it as answered, question or not (measured on the aws-do-agent
++        integration, 2026-10-31); the follow-up question is still owed, on its own row."""
++        adapter = HistoryOnlyFake()
++        adapter.seed([msg("C1", "1.0", "where is the dashboard?")])
++        sched = self.scheduler(adapter)
++        sched.cycle()
++        adapter.seed([msg("C1", "2.0", "and where are the logs?", sender_id="U_B",
++                          thread_id="1.0")])
++        self.assertEqual(sched.cycle()["answered"], 1,
++                         "a reply under the ask left it UNANSWERED because it was a question")
++        self.assertEqual(self.journal.get("C1", "1.0")["response_key"], "thread-reply:2.0")
++        self.assertEqual({r["id"] for r in self.owed.open_items()}, {"msg@C1@2.0"},
++                         "the follow-up question must stay owed on its own row")
++
++    def test_an_ask_polled_with_its_thread_already_answered_is_tied_at_ingest(self):
++        """The first poll of a channel serves every thread parent with the platform's
++        summary of its thread: a backfilled channel's answered asks close in that cycle,
++        with no replies() call each — not after the bounded sweep reaches them."""
++        from core.threads import SWEEP_MAX
++        adapter = HistoryOnlyFake()
++        asks = [msg("C1", f"{i}.0", f"question {i}?") for i in range(1, 2 * SWEEP_MAX + 1)]
++        answers = [msg("C1", f"{i}.5", f"answer {i}", sender_id="B_AGENT", thread_id=f"{i}.0")
++                   for i in range(1, 2 * SWEEP_MAX + 1)]
++        adapter.seed(asks + answers)
++        summary = self.scheduler(adapter).cycle()
++        self.assertEqual(summary["answered"], 2 * SWEEP_MAX,
++                         "asks whose polled row showed a foreign reply stayed open")
++        self.assertEqual(adapter.calls, 0,
++                         "a visibly answered ask cost a replies() call — the sweep window "
++                         "and a 429 would hold such asks open again")
++        self.assertEqual(self.journal.get("C1", "1.0")["response_key"],
++                         "thread-reply:summary:B_AGENT")
++        self.assertEqual({r["id"] for r in self.owed.open_items()}, set(),
++                         "the owed work stayed open after its ask was answered at ingest")
++        self.assertEqual(summary["sweep_truncated"], [], "the sweep still had asks to reach")
++
++    def test_the_ingest_tie_is_off_with_the_source(self):
++        adapter = HistoryOnlyFake()
++        adapter.seed([msg("C1", "1.0", "where is the dashboard?"),
++                      msg("C1", "2.0", "here", sender_id="B_AGENT", thread_id="1.0")])
++        summary = self.scheduler(adapter, threaded_is_answered=False).cycle()
++        self.assertEqual(adapter.calls, 1, "with the route off the sweep is the one route")
++        self.assertEqual(summary["answered"], 1)
++        self.assertEqual(self.journal.get("C1", "1.0")["response_key"], "thread-reply:2.0",
++                         "the sweep's tie, not the summary's, with the route off")
++
++    def test_an_ingest_tie_closes_the_owed_work_and_shows_as_a_thread_answer(self):
++        """The dashboard counts thread answers by the key prefix; the owed registry closes
++        on the journal row — both must see an ingest tie as they see a swept one."""
++        from core.dashboard import snapshot
++        adapter = HistoryOnlyFake()
++        adapter.seed([msg("C1", "1.0", "can you check the dashboard?"),
++                      msg("C1", "2.0", "checked, all green", sender_id="B_AGENT",
++                          thread_id="1.0")])
++        self.scheduler(adapter).cycle()
++        self.assertEqual({r["id"] for r in self.owed.open_items()}, set())
++        snap = snapshot(Path(self.tmp.name) / "journal.db", {})
++        self.assertEqual([a["ts"] for a in snap["attention"] if a["severity"] == "unanswered"],
++                         [], "the dashboard still lists the ingest-tied ask as unanswered")
++        self.assertEqual(snap["journal"]["answered_by_thread"], 1,
++                         "an ingest tie is a thread answer and must be counted as one")
++
+     def test_an_adapter_without_replies_leaves_the_cycle_whole(self):
+         adapter = QueueAdapter([([msg("C1", "1.0", "where is it?")], "1.0")])
+         summary = self.scheduler(adapter).cycle()
+diff --git a/tests/test_slack_adapter.py b/tests/test_slack_adapter.py
+index cbdf3a3..67eaad7 100644
+--- a/tests/test_slack_adapter.py
++++ b/tests/test_slack_adapter.py
+@@ -466,6 +466,38 @@ class ThreadRepliesTest(SlackAdapterTestCase):
+             a.replies("C_ONE", "1.0")
+         self.assertEqual(ctx.exception.retry_after, 7)
+ 
++    def test_thread_summary_reads_the_parents_reply_users_from_the_raw_row(self):
++        """threaded_is_answered: a history PARENT carries reply_count, reply_users and
++        latest_reply; _normalize keeps the row in raw, and the summary reads it back so
++        the engine can tie a visibly answered ask without a conversations.replies call."""
++        parent = slack_msg("1.0", user="U_ASKER", text="where is the dashboard?",
++                           thread_ts="1.0", reply_count=2, reply_users_count=2,
++                           reply_users=["U_ASKER", "B_AGENT"], latest_reply="3.0")
++        a = self.make([history([parent, slack_msg("0.5", text="hello")])])
++        msgs, _ = a.poll(None)
++        by_ts = {m["ts"]: m for m in msgs}
++        self.assertEqual(a.thread_summary(by_ts["1.0"]),
++                         {"reply_count": 2, "repliers": ["U_ASKER", "B_AGENT"],
++                          "latest_reply": "3.0"})
++        self.assertIsNone(a.thread_summary(by_ts["0.5"]),
++                          "a row with no replies on it has no thread summary")
++        self.assertEqual(len(self.http.requests), 1, "the summary made a platform call")
++
++    def test_thread_summary_is_none_for_a_reply_and_for_a_foreign_row(self):
++        a = self.make([history([
++            slack_msg("1.0", thread_ts="1.0", reply_count=1, reply_users=["U_B"]),
++            slack_msg("3.0", user="U_B", text="bump (also sent to channel)",
++                      thread_ts="1.0", subtype="thread_broadcast", reply_count=1)])])
++        msgs, _ = a.poll(None)
++        by_ts = {m["ts"]: m for m in msgs}
++        self.assertIsNone(a.thread_summary(by_ts["3.0"]),
++                          "a broadcast reply's row was read as a thread parent")
++        self.assertIsNone(a.thread_summary({"channel_type": "fake", "channel_id": "C_ONE",
++                                            "sender_id": "U", "ts": "9.0", "text": "x",
++                                            "thread_id": None, "raw": "not json"}),
++                          "a row this adapter did not shape must answer None, not raise")
++        Store.validate(by_ts["1.0"])
++
+     def test_a_broadcast_reply_served_by_history_is_stored_as_a_thread_reply(self):
+         """History DOES serve one kind of reply: one posted "also send to channel"
+         (subtype thread_broadcast) arrives with thread_ts set. It must land with
+diff --git a/tests/test_threads.py b/tests/test_threads.py
+index bb7b00c..22059e3 100644
+--- a/tests/test_threads.py
++++ b/tests/test_threads.py
+@@ -19,6 +19,17 @@ Properties pinned here (each has a mutation in tests/mutation_check.sh):
+ * an adapter without replies() yields None: declared absent, never "nothing new";
+ * the sweep is bounded per cycle and SAYS when it truncated;
+ * a platform 429 stops the sweep and is reported, never swallowed.
++
++threaded_is_answered (2026-10-31) — the tie at INGEST, from the polled row's own thread
++summary (`answered_from_summary`, through the adapter's optional `thread_summary()`):
++
++* a replier other than the asker in the summary answers the ask, with no replies() call,
++  and the key names the replier (`thread-reply:summary:<replier>`);
++* a thread whose only repliers are the asker stays open; a count with no attributable
++  replier stays open; the unattributed placeholder answers nothing;
++* only open ASKS are tied — a STATEMENT parent and an already-answered ask are left alone;
++* an adapter without thread_summary() yields None: declared absent, never "no thread";
++* the tie is stamped at the sighting, so the row does not read EDITED AFTER RESPONSE.
+ """
+ import sys
+ import tempfile
+@@ -34,7 +45,7 @@ from core.journal import Journal  # noqa: E402
+ from core.ratelimit import RateLimited  # noqa: E402
+ from core.schedule import ROUTES  # noqa: E402
+ from core.store import Store  # noqa: E402
+-from core.threads import SWEEP_MAX, answered_by, sweep  # noqa: E402
++from core.threads import SWEEP_MAX, answered_by, answered_from_summary, sweep  # noqa: E402
+ 
+ FakeAdapter = load_adapter_class(ROOT / "channels", "fake")
+ 
+@@ -101,6 +112,122 @@ class SweepHarness(unittest.TestCase):
+         return row["responded_at"], row["response_key"]
+ 
+ 
++class AnsweredFromSummaryTest(SweepHarness):
++    """The ingest-time tie: what the polled parent row says about its thread, without a
++    platform call. The fake adapter derives the summary from the messages it holds, the
++    way Slack puts reply_count / reply_users / latest_reply on a history parent."""
++
++    def polled(self, ts="1.0"):
++        """The ask as the poller handed it to the journal — the normalized row."""
++        return [msg("C1", ts, "where is the dashboard?")]
++
++    def test_a_replier_other_than_the_asker_answers_at_ingest(self):
++        self.ask()
++        self.reply("2.0", "B_AGENT")                 # on the platform before the poll
++        ties = answered_from_summary(self.adapter, self.journal, "C1", self.polled())
++        self.assertEqual(ties, [("1.0", "B_AGENT")])
++        at, key = self.responded("1.0")
++        self.assertIsNotNone(at, "an ask whose row shows a foreign reply stayed open")
++        self.assertEqual(key, "thread-reply:summary:B_AGENT",
++                         "the key must name the replier, and carry the thread-reply: "
++                         "prefix the dashboard counts thread answers by")
++        self.assertEqual(self.adapter.calls, [], "the summary route made a replies() call")
++
++    def test_the_first_foreign_replier_is_named_not_the_asker(self):
++        self.ask()
++        self.reply("2.0", "U_ASKER", text="bump")
++        self.reply("3.0", "U_X")
++        self.reply("4.0", "U_Y")
++        answered_from_summary(self.adapter, self.journal, "C1", self.polled())
++        self.assertEqual(self.responded("1.0")[1], "thread-reply:summary:U_X")
++
++    def test_a_thread_of_the_askers_own_replies_stays_open(self):
++        self.ask()
++        self.reply("2.0", "U_ASKER", text="any update?")
++        ties = answered_from_summary(self.adapter, self.journal, "C1", self.polled())
++        self.assertEqual(ties, [])
++        self.assertIsNone(self.responded("1.0")[0],
++                          "an asker bumping their own thread was read as an answer")
++
++    def test_an_unattributed_replier_answers_nothing(self):
++        self.ask()
++        self.reply("2.0", "unknown", text="This message was deleted.")
++        self.assertEqual(answered_from_summary(self.adapter, self.journal, "C1",
++                                               self.polled()), [])
++        self.assertIsNone(self.responded("1.0")[0])
++
++    def test_a_count_with_no_attributable_replier_stays_open(self):
++        """A summary that says 'replies: 3' and names nobody is not evidence of who
++        replied — a replier the platform did not name would be a guess."""
++        self.ask()
++        self.reply("2.0", "B_AGENT")
++
++        class CountOnly(CountingFake):
++            def thread_summary(self, message):
++                s = super().thread_summary(message)
++                return None if s is None else dict(s, repliers=[])
++        adapter = CountOnly()
++        adapter.seed(self.adapter.messages)
++        self.assertEqual(answered_from_summary(adapter, self.journal, "C1", self.polled()), [])
++        self.assertIsNone(self.responded("1.0")[0])
++
++    def test_only_open_asks_are_tied(self):
++        self.ask(ts="1.0", kind="STATEMENT", text="the deploy finished")
++        self.reply("2.0", "U_X", thread="1.0")
++        self.ask(ts="3.0", text="second question?")
++        self.journal.mark_responded("C1", "3.0", "outbox-key")
++        self.reply("4.0", "U_Y", thread="3.0")
++        polled = [msg("C1", "1.0", "the deploy finished"), msg("C1", "3.0", "second question?")]
++        self.assertEqual(answered_from_summary(self.adapter, self.journal, "C1", polled), [])
++        self.assertIsNone(self.responded("1.0")[0], "a STATEMENT parent was marked answered")
++        self.assertEqual(self.responded("3.0")[1], "outbox-key",
++                         "an already-answered ask was re-tied")
++
++    def test_a_reply_row_says_nothing_about_its_own_thread(self):
++        """History serves a broadcast reply with its thread_id set; the summary of the
++        thread belongs to the parent, so a reply row ties nothing."""
++        self.ask(ts="1.0", kind="STATEMENT", text="status thread", sender="U_A")
++        self.ask(ts="2.0", text="is the dashboard up?", sender="U_B", thread="1.0")
++        self.reply("3.0", "U_C", text="yes", thread="1.0")
++        polled = [msg("C1", "2.0", "is the dashboard up?", sender="U_B", thread="1.0")]
++        self.assertEqual(answered_from_summary(self.adapter, self.journal, "C1", polled), [])
++        self.assertIsNone(self.responded("2.0")[0])
++
++    def test_an_adapter_without_thread_summary_is_declared_absent(self):
++        self.journal.record("C1", "1.0", sender_id="U", text="where?", kind="QUESTION")
++        self.assertIsNone(answered_from_summary(NoRepliesAdapter(), self.journal, "C1",
++                                                self.polled()),
++                          "an adapter that cannot see a thread summary must read as "
++                          "'cannot conclude', never as 'no thread'")
++        self.assertIsNone(self.responded("1.0")[0])
++
++    def test_the_tie_is_stamped_at_the_sighting_not_at_the_reply(self):
++        """The reply's platform time predates the row's first sighting (the reply was
++        there before the poll), so a tie stamped at the reply would make revision 1,
++        recorded at the sighting, read as an edit AFTER the response (R23)."""
++        self.ask()
++        self.reply("0.5", "B_AGENT")      # platform ts before the ask's — as a float
++        answered_from_summary(self.adapter, self.journal, "C1", self.polled())
++        row = self.journal.get("C1", "1.0")
++        self.assertGreaterEqual(row["responded_at"], row["first_seen_at"],
++                                "the tie predates the row's first sighting")
++        self.assertEqual([(r["channel"], r["ts"]) for r in self.journal.edited_after_response()],
++                         [], "a summary-tied ask reads as EDITED AFTER RESPONSE")
++
++    def test_the_fake_adapters_summary_names_repliers_in_reply_order(self):
++        a = FakeAdapter()
++        a.seed([msg("C1", "1.0", "parent"),
++                msg("C1", "2.0", "r1", sender="U_X", thread="1.0"),
++                msg("C1", "3.0", "r2", sender="U_Y", thread="1.0"),
++                msg("C1", "4.0", "r3", sender="U_X", thread="1.0"),
++                msg("C2", "5.0", "other channel", sender="U_Z", thread="1.0")])
++        self.assertEqual(a.thread_summary(msg("C1", "1.0", "parent")),
++                         {"reply_count": 3, "repliers": ["U_X", "U_Y"], "latest_reply": "4.0"})
++        self.assertIsNone(a.thread_summary(msg("C1", "2.0", "r1", sender="U_X", thread="1.0")),
++                          "a reply row has no thread summary of its own")
++        self.assertIsNone(a.thread_summary(msg("C2", "9.0", "no thread")))
++
++
+ class AnsweredByTest(unittest.TestCase):
+     def test_the_first_reply_from_someone_else_is_the_answer(self):
+         replies = [msg("C1", "4.0", "x", sender="U_Y", thread="1.0"),
+
+From 7661053f164f3f80e016326e476113fb50202080 Mon Sep 17 00:00:00 2001
+From: aws-do-agent-anton
+ <343822247+aws-do-agent-anton@users.noreply.github.com>
+Date: Sat, 31 Oct 2026 04:32:39 +0000
+Subject: [PATCH 2/3] tests: re-anchor the scheduler wiring mutation after the
+ Source gained a second keyword
+
+The "scheduler.py: the wiring drops the escalate flag" mutation matched the
+line `escalate_ambiguous=inst.escalate_ambiguous)` by exact text; the previous
+commit added `threaded_is_answered=inst.threaded_is_answered)` after it, so the
+line now ends in a comma and the mutation reported MUTATION TARGET NOT FOUND
+(the full run: caught=396 survived/error=1). The anchor follows the line; the
+mutation is caught again.
+
+Signed-off-by: aws-do-agent-anton <343822247+aws-do-agent-anton@users.noreply.github.com>
+---
+ tests/mutation_check.sh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tests/mutation_check.sh b/tests/mutation_check.sh
+index 80e4a1c..04e60ff 100755
+--- a/tests/mutation_check.sh
++++ b/tests/mutation_check.sh
+@@ -1763,7 +1763,7 @@ run_mutation "config: a quoted escalate_ambiguous loads clean and counts as true
+ # (the ENH-7 adapter-wiring lesson).
+ run_mutation "scheduler.py: the wiring drops the escalate flag" \
+   "scripts/scheduler.py" \
+-  "('                      escalate_ambiguous=inst.escalate_ambiguous)', '                      escalate_ambiguous=False)')" \
++  "('                      escalate_ambiguous=inst.escalate_ambiguous,', '                      escalate_ambiguous=False,')" \
+   "test_schedule"
+ 
+ # first-poll journals rows that read as never-classified — the hedge count starts
+
+From d7b890aa10eb5144f251d9bf7cf84d33dfa1152c Mon Sep 17 00:00:00 2001
+From: aws-do-agent-anton
+ <343822247+aws-do-agent-anton@users.noreply.github.com>
+Date: Sat, 31 Oct 2026 04:57:55 +0000
+Subject: [PATCH 3/3] docs: the ingest tie does not fetch the thread, and a
+ tied ask's thread is not swept again at this pin (review)
+
+Two statements overreached. "A reply that is itself a question still
+answers, and is owed on its own row" holds in the SWEEP, which fetches the
+thread; an ask tied at ingest from its parent's summary is not fetched, so a
+question already in that thread is not journaled by that route. And "the sweep
+stays the route for a thread that grows after its parent was polled" holds
+only while an ask in that thread is open: the sweep works from open asks, so
+once an ask is tied - by either route - its thread is not fetched again, and a
+later reply there reaches the engine only with the follow-up sweep of answered
+asks' threads (PR #12). The docstrings of core/threads.py, the comments of
+core/schedule.py, core/README.md's threads row and the QUICKSTART's honest-limits
+entry now say exactly that; the QUICKSTART also names what the text-blind tie
+counts: a teammate's "+1" or question, an app's auto-reply. No code change.
+
+Signed-off-by: aws-do-agent-anton <343822247+aws-do-agent-anton@users.noreply.github.com>
+---
+ core/README.md     |  2 +-
+ core/schedule.py   | 14 ++++++++------
+ core/threads.py    | 14 ++++++++++----
+ docs/QUICKSTART.md |  6 +++++-
+ 4 files changed, 24 insertions(+), 12 deletions(-)
+
+diff --git a/core/README.md b/core/README.md
+index 4fb3a10..1768f9c 100644
+--- a/core/README.md
++++ b/core/README.md
+@@ -29,7 +29,7 @@ so a new channel type is a directory drop with zero core changes.
+ | `reconfig.py` | staged configuration changes — the ENH-28 trust shape applied to settings.json: an edit op builds a candidate, `stage()` validates it with the engine's OWN loader (the refusal the adopter would otherwise meet at startup) and records the exact old→new diff durably, and only `apply()` — a human click on that exact diff, stale-checked against the file and re-validated against the current environment — writes it (atomically); discard is terminal and kept; policy WIDENINGS are detected and carried on the staged row; auth values are env-var NAME references, with a pasted secret refused unstored and unechoed; a new channel denies by default by OMITTING the policy key, so the loader's own DENY stays the single copy of that rule; there is no hot-reload — `RELOAD_TRUTH` states that a running scheduler/watcher must be restarted |
+ | `schedule.py` | the reference scheduler loop (probe → classify → journal → route → owed) with the incumbent's loop bugs structurally fixed: a single-instance guard per state directory (an OS-held sqlite lock, so a crashed holder leaves no stale lockfile), the cursor committed only after the journal (a crash duplicates, never loses), idle backoff that can never suppress owed work (the measured 8h17m stall), and edge-triggered escalation of unattended work; one thread-sweep budget per adapter per cycle, charged by attempt (refused fetches too), spent across its channels with one call reserved per waiting channel and the bulk moving to the channel that waited, any channel a cycle skipped (a 429, more channels than calls) swept first next cycle and named with its cause in the summary, window and order durable in the store so `--once` runs keep them (review D2/F1-F4: config order starved every channel behind a backlog, silently; the position-based window can still stick on one ask at capacity — COMMS-79 item 18) |
+ | `slo.py` | detection-latency SLO with the completeness poll as ground truth: p50/p90 of push detection latency and of push's lead over the poll, failing on a budget breach or on any poll-confirmed message push never delivered (the incumbent's "12.1min → ~1min" headline only measured its own cron cadence); an empty or unmeasurable comparison is an error, never a pass |
+-| `threads.py` | in-thread answers close open asks (ENH-30): each scheduler cycle sweeps the open asks' threads through the adapter's optional `replies()`, stores and returns the new replies for journaling, and ties an ask to the FIRST reply from someone other than the asker (`Journal.mark_responded`, key `thread-reply:<ts>`) — measured on the aws-do-agent integration 2026-10-12, where `responded_at` had no production caller and the Slack adapter polled `conversations.history` only (which never serves a thread reply), so every answered ask read UNANSWERED forever; one budget per adapter per cycle spent across its channels, a window that rotates through the open asks (none starves while the window is wider than the arrival rate — it is a position in the newest-first list, so at ~1 call per cycle with a new ask every cycle it can stick on one ask: COMMS-79 item 18), one call per thread root, a 429 stops that adapter's sweeping for the cycle and is reported, a platform error on one thread is recorded by ask and skipped (never a crash loop), a reply that is itself an ask or comes from an unattributed sender answers nothing, and an adapter without `replies()` yields None (declared absent, never "nothing new"); `answered_from_summary()` is the route at INGEST (threaded_is_answered, 2026-10-31): the polled parent's own thread summary, read through the adapter's optional `thread_summary()`, ties an open ask whose summary names a replier other than the asker with no platform call (key `thread-reply:summary:<replier>`) — the first poll of a channel serves every answered parent that way, so a backfilled backlog closes in one cycle instead of after the sweep's window reaches it; the setting also lets any foreign in-thread reply answer in the sweep (a follow-up question stays owed on its own row), and `false` restores the sweep-only route with the review-F7 verdict |
++| `threads.py` | in-thread answers close open asks (ENH-30): each scheduler cycle sweeps the open asks' threads through the adapter's optional `replies()`, stores and returns the new replies for journaling, and ties an ask to the FIRST reply from someone other than the asker (`Journal.mark_responded`, key `thread-reply:<ts>`) — measured on the aws-do-agent integration 2026-10-12, where `responded_at` had no production caller and the Slack adapter polled `conversations.history` only (which never serves a thread reply), so every answered ask read UNANSWERED forever; one budget per adapter per cycle spent across its channels, a window that rotates through the open asks (none starves while the window is wider than the arrival rate — it is a position in the newest-first list, so at ~1 call per cycle with a new ask every cycle it can stick on one ask: COMMS-79 item 18), one call per thread root, a 429 stops that adapter's sweeping for the cycle and is reported, a platform error on one thread is recorded by ask and skipped (never a crash loop), a reply that is itself an ask or comes from an unattributed sender answers nothing, and an adapter without `replies()` yields None (declared absent, never "nothing new"); `answered_from_summary()` is the route at INGEST (threaded_is_answered, 2026-10-31): the polled parent's own thread summary, read through the adapter's optional `thread_summary()`, ties an open ask whose summary names a replier other than the asker with no platform call (key `thread-reply:summary:<replier>`) — the first poll of a channel serves every answered parent that way, so a backfilled backlog closes in one cycle instead of after the sweep's window reaches it; the setting also lets any foreign in-thread reply answer in the sweep (there the follow-up question is fetched and stays owed on its own row; a thread tied at ingest is not fetched, so a question already in it waits for the follow-up sweep of PR #12), and `false` restores the sweep-only route with the review-F7 verdict |
+ | `store.py` | sqlite message store: explicit pinned schema (unknown and missing fields refused), idempotent re-ingest, first-arrival stamping (first-write-wins, so re-polls never move it), per-(instance, channel) cursor persistence |
+ 
+ Each module's docstring carries the measured incident it exists to prevent — read it before
+diff --git a/core/schedule.py b/core/schedule.py
+index 9ce0568..35b2169 100644
+--- a/core/schedule.py
++++ b/core/schedule.py
+@@ -119,11 +119,13 @@ class Source:
+     escalate_ambiguous: bool = False
+     # threaded_is_answered (2026-10-31): a message that has a thread is answered. ON: an
+     # open ask whose polled row shows a reply from someone other than the asker is tied
+-    # at ingest (core/threads.answered_from_summary, no platform call), and in the sweep
+-    # any such reply answers, a question included (the follow-up is owed on its own
+-    # row). OFF: the sweep is the one in-thread route and a reply that is itself an ask
+-    # does not answer (review F7). Per source, like the taxonomy: what counts as an
+-    # answer in a 1:1 channel with an agent differs from a team's support channel.
++    # at ingest (core/threads.answered_from_summary, no platform call - the thread is not
++    # fetched, so a question already in it is not journaled by that route), and in the
++    # sweep any such reply answers, a question included (there the follow-up is fetched
++    # and owed on its own row). OFF: the sweep is the one in-thread route and a reply
++    # that is itself an ask does not answer (review F7). Per source, like the taxonomy:
++    # what counts as an answer in a 1:1 channel with an agent differs from a team's
++    # support channel.
+     threaded_is_answered: bool = True
+ 
+ 
+@@ -249,7 +251,7 @@ class Scheduler:
+                 # never the answer (review F7); the source's vocabulary decides —
+                 # unless the source counts a message that has a thread as answered
+                 # (threaded_is_answered): then any reply from someone else answers,
+-                # and the follow-up question is owed on its own row.
++                # and the follow-up question, fetched here, is owed on its own row.
+                 is_answer = None
+                 if not src.threaded_is_answered:
+                     is_answer = lambda m, _src=src: classify(  # noqa: E731
+diff --git a/core/threads.py b/core/threads.py
+index b0cc37c..351438f 100644
+--- a/core/threads.py
++++ b/core/threads.py
+@@ -44,8 +44,11 @@ replier other than the asker — no platform call, so the sweep's window and a 4
+ hold a visibly answered ask open. Measured on the aws-do-agent integration (operator,
+ 2026-10-31): asks whose thread anyone could see on the platform read UNANSWERED for as long
+ as the bounded sweep took to reach them, and the dashboard kept "qualifying them as
+-unanswered". The sweep stays the route for a thread that grows AFTER its parent was polled:
+-a cursored history poll never serves a parent twice.
++unanswered". The sweep stays the route for a thread that grows AFTER its parent was polled
++while that ask is still open: a cursored history poll never serves a parent twice, and the
++sweep works from open asks — once an ask is tied, by either route, its thread is not fetched
++again at this pin, so a later reply there (a follow-up question) reaches the engine only with
++the follow-up sweep of answered asks' threads (PR #12).
+ """
+ from __future__ import annotations
+ 
+@@ -103,8 +106,11 @@ def answered_from_summary(adapter, journal, channel: str, messages) -> list | No
+     open — a replier the platform did not name would be a guess, and the engine never
+     guesses. The replies' text is not in view here, so the sweep's `is_answer` verdict
+     cannot be applied; the setting that turns this route on turns that verdict off too
+-    (core/schedule.py: a reply that is itself a question still answers, and is owed on
+-    its own row). The tie is stamped at the poll that sighted the summary (`at` default):
++    (core/schedule.py: in the sweep a reply that is itself a question still answers, and
++    is owed on its own row). An ask tied HERE is not fetched afterwards — the sweep works
++    from open asks — so a question already in its thread is not journaled by this route;
++    the follow-up sweep of answered asks' threads (PR #12) is what reaches it. The tie is
++    stamped at the poll that sighted the summary (`at` default):
+     the reply's own platform time predates the row's first sighting, and a tie stamped
+     there would read every such ask as EDITED AFTER RESPONSE.
+ 
+diff --git a/docs/QUICKSTART.md b/docs/QUICKSTART.md
+index 4e2b09d..66bf139 100644
+--- a/docs/QUICKSTART.md
++++ b/docs/QUICKSTART.md
+@@ -367,7 +367,11 @@ surface says so instead of implying one.
+   summary (the adapter's optional thread_summary(), from Slack's reply_users on a history
+   parent) names a replier other than the asker; the summary carries no text, so that route
+   cannot tell a follow-up question from an answer, and with the setting on the sweep
+-  counts any such reply too. "Responded" means exactly that, not
++  counts any such reply too - a teammate's "+1" or question, an app's auto-reply. An ask
++  tied at ingest is not fetched afterwards (the sweep works from open asks), so a question
++  already in its thread is not journaled until a sweep of answered asks' threads exists
++  (PR #12); the same holds, at this pin, for any reply posted in a thread after its ask was
++  tied by either route. "Responded" means exactly that, not
+   "resolved": a third party's "+1" closes an ask too, and the dashboard counts
+   thread-closed asks apart from answers sent from here. A reply posted top-level in the
+   channel by anyone else is stored and listed but cannot be tied to the ask, and the

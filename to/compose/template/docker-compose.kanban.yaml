@@ -1,0 +1,84 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+# The self-hosted kanban board (docs/manual/boards.md "Kanban board") - an overlay of docker-compose.yaml that run.sh renders
+# and adds with -f only while the board is on (UI_START and UI_VIBE_KANBAN); stop.sh and status.sh add it when
+# the rendered file exists. Kept out of the base file so that one stays a valid docker stack deploy (swarm) file:
+# swarm runs no board.
+#
+# Postgres, the board server built by ./build.sh and Electric, as upstream's crates/remote/docker-compose.yml runs
+# them, none publishing a host port. The database and Electric are on kanban-internal only, an internal network (no
+# route out) that the agent is not on, so the two third-party images cannot reach it; the board server is on that one
+# and on the project's default network, where the agent reaches it. Their settings and secrets come from the mode-600 env files ./kanban.sh init
+# writes under wd/kanban (run.sh runs it), so no secret lands in this rendered file; after the start run.sh applies
+# the database password in kanban-db (./kanban.sh db-password). Their data stays in the two volumes after a down.
+
+services:
+
+  # the agent: the board URL its home proxy serves at kanban.localhost, the project its goal mirror writes, the
+  # login file under the project mount and the order of the goal cards (merged into the agent service of
+  # docker-compose.yaml)
+  ${CONTAINER}:
+    environment:
+      - KANBAN_BOARD_URL=${KANBAN_BOARD_URL}
+      - KANBAN_PROJECT=${CONTAINER}
+      - KANBAN_AUTH_FILE=${VOLUME_PATH_INTERNAL}/wd/kanban/kanban.env
+      - KANBAN_CARD_ORDER=${KANBAN_CARD_ORDER}
+
+  kanban-db:
+    image: ${KANBAN_POSTGRES_IMAGE}
+    command: ["postgres", "-c", "wal_level=logical"]
+    networks:
+      - kanban-internal
+    env_file:
+      - ${KANBAN_DIR}/db.env
+    volumes:
+      - kanban-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U remote -d remote"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  kanban-server:
+    image: ${KANBAN_IMAGE}
+    networks:
+      - default
+      - kanban-internal
+    env_file:
+      - ${KANBAN_DIR}/server.env
+    depends_on:
+      kanban-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:${PORT_INTERNAL_KANBAN_BOARD}/v1/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  kanban-electric:
+    image: ${KANBAN_ELECTRIC_IMAGE}
+    working_dir: /app
+    networks:
+      - kanban-internal
+    env_file:
+      - ${KANBAN_DIR}/electric.env
+    volumes:
+      - kanban-electric-data:/app/persistent
+    depends_on:
+      kanban-db:
+        condition: service_healthy
+      kanban-server:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  kanban-internal:
+    internal: true
+
+volumes:
+  kanban-db-data:
+  kanban-electric-data:

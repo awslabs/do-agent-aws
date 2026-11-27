@@ -1,0 +1,35 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+# The Slack app manifest the harness-setup skill prints: https://api.slack.com/apps -> Create New App -> From an app
+# manifest -> pick the workspace -> paste this -> Create. Read-only by default: the agent reads the channels you name.
+# chat:write is the opt-in below, for an agent that answers in Slack; files:write the second, for an agent that attaches
+# a file (a chart, a report) there with /agent/slack-upload.sh. Change the app's name if you like.
+display_information:
+  name: do-agent-aws
+  description: polls the channels you name, classifies asks, stages replies for a human to approve
+  background_color: "#1a1a19"
+features:
+  bot_user:
+    display_name: do-agent-aws
+    always_online: false
+oauth_config:
+  scopes:
+    bot:
+      - channels:history    # conversations.history / conversations.replies in public channels: the poll and the thread sweep
+      - groups:history      # the same in private channels the app is invited to
+      - im:history          # the same in 1:1 DMs with the bot: the DM answered-state needs the DM's messages
+      - mpim:history        # the same in group DMs
+      - channels:read       # conversations.info / conversations.list: channel id <-> name for the dashboard and the doctor
+      - groups:read         # the same for private channels
+      - im:read             # the same for DMs (is this id a DM?)
+      - mpim:read           # the same for group DMs
+      - users:read          # users.info / users.list: sender names on the dashboard, never message content
+      # - chat:write        # the opt-in, the ONE write: chat.postMessage, for the agent's answers in Slack threads, a staged
+      #                     # reply sent after your GO, and the doctor's --post-test round-trip; uncomment it, reinstall
+      # - files:write       # the second opt-in: files.getUploadURLExternal + files.completeUploadExternal, the two calls
+      #                     # /agent/slack-upload.sh makes to attach a file (a chart, a report) in a watched channel or
+      #                     # thread; the message it posts with the file needs no chat:write. Uncomment it, reinstall
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

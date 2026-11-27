@@ -1,0 +1,51 @@
+{
+ "permissions": {
+  "deny": [
+   "mcp__plugin_github_github",
+   "mcp__plugin_github_github__*",
+   "Bash(gh:*)",
+   "Bash(/usr/bin/gh:*)",
+   "Bash(curl:*)",
+   "Bash(wget:*)",
+   "Bash(tmux show-environment:*)",
+   "Bash(tmux showenv:*)",
+   "Bash({CHARTER_DIR}/post.sh:*)",
+   "Bash(bash {CHARTER_DIR}/post.sh:*)",
+   "Read(//proc/**)",
+   "Read(~/.config/gh/**)",
+   "Edit(/{WORKDIR}/outbox/*.GO)",
+   "Write(/{WORKDIR}/outbox/*.GO)",
+   "Read(/{WORKDIR}/outbox/*.GO)",
+   "Edit(/{WORKDIR}/.claude/**)",
+   "Write(/{WORKDIR}/.claude/**)",
+   "Edit(/{WORKDIR}/.gh-front/**)",
+   "Write(/{WORKDIR}/.gh-front/**)",
+   "Edit(/{WORKDIR}/gate/**)",
+   "Write(/{WORKDIR}/gate/**)",
+   "Edit(/{WORKDIR}/gate.log)",
+   "Write(/{WORKDIR}/gate.log)",
+   "Edit(/{PRIVATE_DIR}/**)",
+   "Write(/{PRIVATE_DIR}/**)",
+   "Read(/{PRIVATE_DIR}/**)",
+   "Edit(//opt/issues-tracker/**)",
+   "Write(//opt/issues-tracker/**)",
+   "Edit(//agent/**)",
+   "Write(//agent/**)",
+   "Edit(/{CHARTER_DIR}/**)",
+   "Write(/{CHARTER_DIR}/**)"
+  ]
+ },
+ "hooks": {
+  "PreToolUse": [
+   {
+    "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|mcp__plugin_github_github__.*",
+    "hooks": [
+     {
+      "type": "command",
+      "command": "ISSUES_SPOKE_WD={WORKDIR} ISSUES_SPOKE_PRIVATE_DIR={PRIVATE_DIR} bash {CHARTER_DIR}/session-hook.sh || exit 2"
+     }
+    ]
+   }
+  ]
+ }
+}

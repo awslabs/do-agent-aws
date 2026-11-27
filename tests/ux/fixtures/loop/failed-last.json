@@ -1,0 +1,12 @@
+{
+ "about": "every goal is marked done and the STOP flag is there, but the last fire failed (rc 1): a fault, not completion",
+ "running": false,
+ "log": [[-900, "LOOP START interval=300s goals={goals} fire_timeout=600s workdir={work}"],
+         [-800, "FIRE 1 BEGIN goals={goals}"], [-760, "FIRE 1 END rc=0 duration=40s"],
+         [-500, "FIRE 2 BEGIN goals={goals}"], [-488, "FIRE 2 END rc=1 duration=12s"],
+         [-488, "LOOP STOPPED stop flag {loop}/STOP present"]],
+ "state": [-488, "STOPPED reason=stop-flag"],
+ "stop_flag": true,
+ "goals": "- [x] write the report\n",
+ "fires": {"1": "wrote the report\n", "2": "Error: the model call failed\n"}
+}

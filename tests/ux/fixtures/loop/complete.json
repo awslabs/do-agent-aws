@@ -1,0 +1,11 @@
+{
+ "about": "every goal done: the last fire set the STOP flag and ended rc 0, and the loop stopped on that flag",
+ "running": false,
+ "log": [[-900, "LOOP START interval=300s goals={goals} fire_timeout=600s workdir={work}"],
+         [-800, "FIRE 1 BEGIN goals={goals}"], [-751, "FIRE 1 END rc=0 duration=49s"],
+         [-751, "LOOP STOPPED stop flag {loop}/STOP present"]],
+ "state": [-751, "STOPPED reason=stop-flag"],
+ "stop_flag": true,
+ "goals": "# Goals\n\n- [x] Inventory /wd with one sub-agent and write /wd/demo/inventory.md, one entry per line; DONE when the file lists every entry directly under /wd.\n",
+ "fires": {"1": "The only goal is done, so I created the stop flag and the loop will halt.\n"}
+}

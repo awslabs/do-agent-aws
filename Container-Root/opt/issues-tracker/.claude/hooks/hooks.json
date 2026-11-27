@@ -1,0 +1,44 @@
+{
+    "description": "issues-tracker plugin hooks: a PreToolUse write gate and comment check, a SessionStart report",
+    "hooks": {
+        "SessionStart": [
+            {
+                "matcher": "startup|clear|compact",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/.claude/hooks/session-start-dashboard.sh\"",
+                        "timeout": 5
+                    }
+                ]
+            }
+        ],
+        "PreToolUse": [
+            {
+                "matcher": "Bash",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/.claude/hooks/block-gh-write.sh\" || exit 2",
+                        "timeout": 3
+                    },
+                    {
+                        "type": "command",
+                        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/.claude/hooks/pretooluse-block-comment-noise.sh\" || exit 2",
+                        "timeout": 3
+                    }
+                ]
+            },
+            {
+                "matcher": "mcp__.*github.*",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/.claude/hooks/block-gh-write.sh\" || exit 2",
+                        "timeout": 3
+                    }
+                ]
+            }
+        ]
+    }
+}

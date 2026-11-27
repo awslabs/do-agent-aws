@@ -1,0 +1,192 @@
+{
+  "schema": "do-agent-aws-north-star/v1",
+  "updated": "2026-10-15",
+  "title": "North Star",
+  "statement": "A new user clones do-agent-aws, runs ./build.sh and ./run.sh, and gets a running multi-agent harness that does real work and shows it - with nothing undocumented and nothing leaking.",
+  "rule": "A row counts only when a tracked check exists that FAILS if the property is removed. A green run proves the check; the check proves the property.",
+  "scoring": {
+    "YES": "a tracked check proves the property today and fails when the property is removed",
+    "YES*": "a tracked check exists and fails when the property is removed, but today it reports a failure, a skip or covers only part of the property; the caveat is named on the row",
+    "NO": "no tracked check: the property rests on a person having looked"
+  },
+  "today_values": {
+    "PASS": "the check passed at this commit",
+    "FAIL": "the property does not hold at this commit (its check fails, or the default start path cannot exercise it)",
+    "PARTIAL": "part of the property passes, part is unchecked or fails",
+    "SKIP": "the check cannot run here (for example, no credentials)"
+  },
+  "rows": [
+    {
+      "id": "NS-1",
+      "goal": "A new user clones the repository, runs ./build.sh and ./run.sh, and gets a running multi-agent harness: every tile on the home page green and the agent answering through Amazon Bedrock.",
+      "check": "./test.sh (the in-container suite); Container-Root/test3.sh (two headless fires complete a goal against Bedrock, skipped without credentials); tools/fresh-deploy-proof/run-all.sh (a clean clone, ./build.sh, ./run.sh, every tile through 127.0.0.1:8000 and the suite, on a host that never saw the image); Container-Root/test22.sh checks 7b [plain-run-set] and 7c [killed-spoke-returns] (a plain start with .env's defaults runs a session for every enabled agent, and a killed spoke is back within 20 s)",
+      "status": "YES*",
+      "today": "PARTIAL",
+      "caveat": "a plain start with .env's defaults runs the hub, the supervisor and six spokes, and test22 checks 7b and 7c fail when one of them is missing or a killed spoke does not come back; on 2026-10-15 a fresh clone of main 3dc96e0, before the issues spoke shipped (an empty HOME, the stock scripts and defaults, only the container name, image tag and home port renamed to share a host) built, and ./run.sh started all seven sessions with every service up and the supervisor's pass at 5 of 6 live, conversations waiting for Slack; its ./test.sh passed 40 of 44 tests with one skip, test3's two fires answering through Bedrock: test9 and test16 fail on the renamed home port and pass with the default, and test18 failed once and passed alone; three fresh clones of main on 2026-10-14 (6c92c1b, 78afff8, b7cd1f0; an empty HOME, the stock scripts) built and ran with every tile up (13, 14 and 15 tiles) and the agent answered through Bedrock from the chat page; the four ./test.sh reds recorded on b7cd1f0 and the two found after them have their fixes merged (#104, #121, #122); the proof driver's last recorded runs are the eleven behind #31"
+    },
+    {
+      "id": "NS-2",
+      "goal": "The agent does real work without Slack: a goal given to the autonomy loop reaches Done in one fire, shows on the board, and leaves a fact in the agent's memory.",
+      "check": "Container-Root/test3.sh (two fires complete a trivial goal against Bedrock; skipped without credentials); Container-Root/test18.sh (offline: a fire that checks a goal off moves its card to Done on the kanban board, and back); Container-Root/test-board.sh (offline: the Board tile and page); Container-Root/test-north-star.sh check 8 (the default start path: with .env's AUTONOMY_LOOP and no Slack the loop's autostart gate reads off, so that path cannot exercise the property, and the check fails once it starts the loop)",
+      "status": "YES*",
+      "today": "FAIL",
+      "caveat": "FAIL is the default start path's result: .env ships AUTONOMY_LOOP=auto, which starts the loop only when SLACK_BOT_TOKEN and SLACK_CHANNELS are set (whether auto should also start it without Slack is an open decision for the maintainer), so a fresh clone without Slack runs no loop and a goal on the board is never worked (measured on a fresh clone of 3dc96e0 on 2026-10-15, whose start log says the loop was not started because SLACK_BOT_TOKEN and SLACK_CHANNELS are not set); the first three checks pass only where the loop runs, with AUTONOMY_LOOP=true or Slack configured, because they start their fires themselves, so a check that works a goal on the default path is what is missing (check 8 pins only that the path starts no loop); on that path the home page says the goal waits until the loop is enabled and names AUTONOMY_LOOP=true (Container-Root/test16.sh check 2), the container's start log gives the reason and no page does; the fact the agent's memory gains from a goal has no tracked check yet, though a fresh clone shows the agent's bank after one chat session"
+    },
+    {
+      "id": "NS-3",
+      "goal": "A new user needs only the README: no undocumented step between a fresh clone and the first green home page.",
+      "check": "a clone-and-go run on a brand-new host (tools/fresh-deploy-proof/run-all.sh: a host that never saw the image, from git clone to the suite) and the acceptance checklist, docs/GA-RELEASE.md section 3 row 1 (the build names a missing prerequisite)",
+      "status": "YES*",
+      "today": "FAIL",
+      "caveat": "as of 2026-10-14 the last run on a brand-new host is run 1 on 2026-10-13 (a fresh instance and a Docker-in-Docker client), which found two blocking and four high-priority findings; the preflight that names the missing prerequisites is on main since 2026-10-14 (#96), and the re-run on a brand-new host is pending, so the row stays FAIL until one passes; the three fresh clones of 2026-10-14, on a host that already had the image's base layers, needed no step the README does not name beyond credentials for the private repository"
+    },
+    {
+      "id": "NS-4",
+      "goal": "No secret and no internal name ships: not in the tree, not in the image, not in the commit messages.",
+      "check": "Container-Root/test17.sh check 2 (Container-Root/seed/scan.py over the shipped seed and, in tree mode, over the vendored LogLearner tree, each with a planted control) and the build gate in install-loglearner.sh (a denylisted name fails the build)",
+      "status": "YES*",
+      "today": "PARTIAL",
+      "caveat": "the tree, the shipped seed and the vendored tree are scanned with planted controls, and the internal identifier found in the vendored tree on 2026-10-13 is gone since #36; the scan over the whole image and over a merged range's commit messages is not a tracked check on main (docs/GA-RELEASE.md section 3 row 20)"
+    }
+  ],
+  "agents_note": "The agents of the stack, each with its own North Star: the names and the one-line North Stars are those of the agent stack's charter (docs/AGENT-STACK.md), taken as written; the UI column names the tiles as the home page titles them today. Each agent is scored by the rule above. A plain start runs the hub, the supervisor and seven spokes (test22 check 7b [plain-run-set]), and test22 check 10 keeps docs/AGENT-STACK.md, the Guide's defaults and this register in step; an agent scored NO says in its caveat how it becomes YES.",
+  "agents": [
+    {
+      "agent": "agent",
+      "role": "Hub: plans, delegates to the spokes, starts workers, answers the person with sources; also runs the autonomy loop",
+      "north_star": "A new user clones the repository, runs ./build.sh and ./run.sh, and gets a running multi-agent harness that does real work and shows it, with nothing undocumented and nothing leaking",
+      "ui": "tmux terminal, Agent chat, Agent loop",
+      "talks_to": "the person; each spoke",
+      "check": "Container-Root/test12.sh (the hub's own session: the shared agent tmux session runs the claude CLI, with a planted control); Container-Root/test22.sh checks 4 [bus-request-reply-journaled] and 5 [spoke-answers-hub] (a hub request to a spoke is journaled and answered by the spoke's own cycle); Container-Root/test3.sh [fire-reads-inbox] (offline: a loop fire reads the hub's open bus requests and notices before its goals, its reply is journaled with reply_to, and what a fire that fails or dies was handed stays open); the checks of rows NS-1 to NS-4 (the hub's North Star is the harness's own statement)",
+      "status": "YES*",
+      "today": "PARTIAL",
+      "caveat": "the hub's session, its requests to the spokes, its loop fires' bus inbox and the four rows above are checked; the inbox check answers with a stand-in claude, so a real fire's answer is not a tracked check; NS-2 and NS-3 still fail, and no check exercises native SendMessage between two sessions"
+    },
+    {
+      "agent": "supervisor",
+      "role": "Keeps every enabled agent alive and unstuck; no model calls",
+      "north_star": "Every enabled agent is running and unstuck, and every repair it makes is one a person would make without thinking: it never answers a menu and never sends, spends or deletes",
+      "ui": "its last pass on the tmux-agent dashboard and a home-page row",
+      "talks_to": "reports to agent and to the person",
+      "check": "Container-Root/test22.sh checks 7b [plain-run-set] (every enabled session runs on a plain start), 7c [killed-spoke-returns] (a killed spoke is back within 20 s at the shipped interval, with one restart line), 5 [spoke-answers-hub] (a spoke whose claude keeps exiting is marked stuck at the cap and not started again), 8 (planted menus, one whose answer would send, get no key); Container-Root/test-fleet-manager.sh checks 5 [close-exited], 5b [close-keeps-output] and 6 [close-off] (its one close: a scratch session whose every pane's process has exited, at two passes in a row, the output tmux kept for those panes copied to a file first and the session left open when it cannot be; never a running pane or a session of the registry, and none with SUPERVISOR_CLOSE_EXITED=false)",
+      "status": "YES*",
+      "today": "PARTIAL",
+      "caveat": "every clause but one is checked: nothing checks that it never spends or deletes"
+    },
+    {
+      "agent": "conversations",
+      "role": "Polls, classifies and journals the configured channels; stages replies, never sends",
+      "north_star": "Lets the agents take part in human communication channels without ever silently losing an incoming message or silently sending an outgoing one",
+      "ui": "Conversations",
+      "talks_to": "agent only",
+      "check": "Container-Root/test22.sh checks 5c [waiting-for-settings] (without SLACK_BOT_TOKEN and SLACK_CHANNELS it waits and says so) and 10b [spokes-own-checks] (its cycle against a stub Slack, when the engine has the stub override); Container-Root/test-comms-defaults.sh (the engine behind it: the pinned Slack adapter has no send path)",
+      "status": "YES*",
+      "today": "PARTIAL",
+      "caveat": "the engine at /opt/comms has no stub Slack API override (the spoke's pinned ref has it), so test22 check 10b does not run its cycle against a stub Slack and says so; a stub Slack is not Slack, and never silently losing an incoming message rests on the engine's own tests"
+    },
+    {
+      "agent": "insights",
+      "role": "Mines new session transcripts into rule candidates through the gates; best-effort memory per candidate",
+      "north_star": "Turns the agents' work exhaust into screened, recallable rules that measurably improve the next session",
+      "ui": "Session insights, Learned rules",
+      "talks_to": "agent only",
+      "check": "Container-Root/test22.sh check 10b [spokes-own-checks] (its loop's self-test: a planted correction banks one candidate, a duplicate none)",
+      "status": "YES*",
+      "today": "PARTIAL",
+      "caveat": "no check yet measures that its rules improve the next session"
+    },
+    {
+      "agent": "clusters",
+      "role": "Read-only status of every configured Kubernetes context; brokers the harness's cluster lock (GPU leases)",
+      "north_star": "Shares GPU clusters with other people without ever acting on a stale picture or presenting one as fresh; never mutates a cluster",
+      "ui": "Headlamp",
+      "talks_to": "agent only; unprompted only when placement changes",
+      "check": "Container-Root/test22.sh check 10b [spokes-own-checks] (its loop's self-test: every write verb refused, a context named like an EKS cluster read with a safe cache name); Container-Root/test-cluster-lock.sh checks 10 to 13 (the cluster lock it brokers: the hub's gpu-lease requests answered from its view, never on a cordoned node or from a view older than 30 minutes, release and expiry, one cycle's lease table and its notice, the claim-and-release rule in its charter and the agent's rules; checks 1 to 9 prove the lock itself)",
+      "status": "YES*",
+      "today": "PARTIAL",
+      "caveat": "its 15-minute cadence is not checked, and its own North Star scores 2 of its 10 rows YES; a lease binds this harness's jobs to each other and reserves nothing from other people's workloads, and the lock's checks run on planted views, not a live cluster"
+    },
+    {
+      "agent": "sessions",
+      "role": "Keeps the books of the container's tmux sessions from the tmux-agent dashboard's census",
+      "north_star": "Reports no state it did not read from the census; never spawns, sends to or kills a session",
+      "ui": "tmux-agent dashboard",
+      "talks_to": "agent only",
+      "check": null,
+      "status": "NO",
+      "today": null,
+      "caveat": "it runs on a plain start (test22 check 7b); Container-Root/test-fleet-manager.sh checks 1 to 7 cover the session ledger, the books of the container's tmux sessions that the supervisor keeps from tmux, not this spoke's reports, and no check that its reports match the census is written yet"
+    },
+    {
+      "agent": "loops",
+      "role": "Keeps the Loop Deck's topology and loop health true every cycle",
+      "north_star": "Never shows a loop as healthy without evidence of a completed run, and fails closed when it cannot validate",
+      "ui": "Loop Deck",
+      "talks_to": "agent only",
+      "check": null,
+      "status": "NO",
+      "today": null,
+      "caveat": "it runs on a plain start (test22 check 7b), but no check of its North Star is written yet; the Loop Deck it keeps true is checked on its own by Container-Root/test-loop-deck.sh and Container-Root/test-loop-deck-adapter.sh"
+    },
+    {
+      "agent": "issues",
+      "role": "Triages the open issues and pull requests in scope: conflicts, failing checks, requested changes, what needs a reply; stages reply drafts, never posts",
+      "north_star": "Outward drafts are evidence-driven, scrubbed and human-confirmed; nothing is ever posted automatically",
+      "ui": "Board, Goals board, Project board (Plane)",
+      "talks_to": "agent only",
+      "check": "Container-Root/test-issues-spoke.sh checks 2 [front-refuses-writes] and 6b [session-walls] (nothing is posted automatically: every write form is refused before gh runs, and the session holds no GitHub token and is denied the write paths), 6 [go-gate] (scrubbed and human-confirmed: a draft is sent only after a GO naming its sha256 and its first 12 characters typed at a terminal, and a token-shaped draft or one the redact scan refuses is refused), 3 [waiting-for-github], 4 [cycle-rows-read-only], 4b [named-repos-own-scan], 5 [hub-asks-conflicting], 1 [registry-entry] and 7; Container-Root/test22.sh check 7b [plain-run-set] (a plain start runs issues)",
+      "status": "YES*",
+      "today": "PARTIAL",
+      "caveat": "check 6 sends through a stub gh, so a real GitHub send behind a person's GO is never exercised; evidence-driven has no tracked check (its own North Star, Container-Root/agent/charters/issues/NORTH-STAR.md, scores that row NO: a person checks the evidence at the GO); every session runs as root in one container, so one that worked around its deny rules could type the GO's prefix or read another process's token; and the boards it names do not show its rows yet"
+    },
+    {
+      "agent": "docker",
+      "role": "Builds container images inside the harness through the stack's BuildKit daemon into its registry; keeps the build doctrine and the substrate's health in view",
+      "north_star": "Builds container images inside the harness from a Dockerfile into the stack's own registry, without a host Docker socket or cloud resources made for the occasion, and never pushes outside the stack without a person's say",
+      "ui": "Docker spoke, its page at /docker/",
+      "talks_to": "agent only",
+      "check": "./test-docker-spoke.sh checks 1 [substrate-up] to 10 [prev-carry-forward] (a build through the helper lands in the stack's registry with its digest, a push to another registry is refused before buildctl runs and the helper's push target cannot be redirected, the cycle's page lists the images, its rows and the doctor's check go red with a sidecar stopped and a failed substrate reads DOWN, and a down cycle announces no image as new); Container-Root/test22.sh check 7b [plain-run-set] (the plain start's set includes docker)",
+      "status": "YES*",
+      "today": "PARTIAL",
+      "caveat": "the build into the registry, the refused outside push, the page and the red rows and doctor check are checked; nothing checks its notices for a stopped daemon or a low disk, a failed build's record, its session's deny rules in a live session, or that no cloud resource is made, and the test needs a host that allows unprivileged user namespaces; every session runs as root in one container and can reach the daemon's socket, so a session that worked around its deny rules, or any other session, could push an image outside the stack with buildctl directly: the helper and the deny rules, not the daemon, are the gate on where an image goes"
+    }
+  ],
+  "components_note": "Each component the agents stand on keeps a North Star of its own, written to the same rule. A public repository's document is linked; a private one's is described, never linked. Agent names the agent of the stack that stands on it; the as-of date is the day this register read the document.",
+  "components": [
+    {
+      "name": "communication-engine",
+      "agent": "conversations",
+      "where": "https://github.com/dmvevents/communication-engine/blob/1156a40ca7021cbae9a4e89f42a5b0478bd2c86f/docs/NORTH-STAR.md, at the commit Container-Root/setup/install-comms.sh pins (the image's clone at /opt/comms carries the same file)",
+      "as_of": "2026-10-14",
+      "state": "five ordered priorities and the ways to falsify it; last changed 2026-09-02, before the write surface (a person's click sends a staged reply, 2026-09-04) that the pinned commit carries, which its open items do not reflect yet"
+    },
+    {
+      "name": "tmux-agent",
+      "agent": "sessions",
+      "where": "https://github.com/dmvevents/tmux-agent-public/blob/92113b54b755cffc7666c0f475cb706b38d9ade9/docs/NORTH-STAR.md, at the commit the dashboard vendored under Container-Root/opt/tmux-agent is built from (that copy links the document and does not carry it)",
+      "as_of": "2026-10-14",
+      "state": "one sentence, four non-negotiables and its own definition of done; it records that its GA claim rests on adoption by a stranger, a property its 2026-08-27 refutation run found never measured"
+    },
+    {
+      "name": "LogLearner",
+      "agent": "insights",
+      "where": "the LogLearner source repository, which is private; the minimal runtime vendored under Container-Root/opt/loglearner carries no North Star document",
+      "as_of": "2026-10-14",
+      "state": "not read here: the vendored docs cite two of its gates, N4 (an inventory of every path data can leave the host, audited 2026-08-27) and N5 (the knowledge lifecycle, closed 2026-08-27)"
+    },
+    {
+      "name": "Loop Deck",
+      "agent": "loops",
+      "where": "the Loop Deck's source repository, which is private; its statement also ships with the loops spoke at Container-Root/agent/charters/loops/NORTH-STAR.md, and the release tree vendored under Container-Root/opt/loop-deck carries none",
+      "as_of": "2026-10-14",
+      "state": "one statement paragraph, written 2026-10-14, which the loops agent's North Star above shortens; no scored rows yet"
+    },
+    {
+      "name": "clusters spoke",
+      "agent": "clusters",
+      "where": "ships with the clusters spoke: its statement at Container-Root/agent/charters/clusters/NORTH-STAR.md, its scored rows with the spoke's private source",
+      "as_of": "2026-10-14",
+      "state": "10 rows, 2 YES on 2026-10-14 (write verbs refused, and safe cache names for EKS-style contexts); seven have no automated check, and one has a check the running code does not pass yet"
+    }
+  ]
+}

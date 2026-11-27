@@ -1,0 +1,1 @@
+query Q { search(query: """repo:example/example \""" """, type: REPOSITORY) { repositoryCount } } mutation M { addComment(input: {subjectId: "fixture", body: "offline"}) { clientMutationId } }

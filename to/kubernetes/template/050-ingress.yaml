@@ -1,0 +1,21 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ${APP_NAME}
+  namespace: ${NAMESPACE}
+spec:
+  rules:
+  - host: "${APP_DNS_NAME}"
+    http:
+      paths:
+      # Targets the single home-proxy port; every harness UI is served through it
+      # (docs/manual/ui.md "Home page and reverse proxy")
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: ${APP_NAME}
+            port:
+              number: ${PORT_EXTERNAL_HOME}
