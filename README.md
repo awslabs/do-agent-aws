@@ -122,7 +122,15 @@ for each kind of finding. Report a security issue through the
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). This project has adopted the [Amazon Open Source Code of Conduct](CODE_OF_CONDUCT.md).
+Big shout out to our awesome contributors! Thank you for making this project better!
+
+Contributors: [Anton Alexander](https://github.com/dmvevents), [Alex Iankoulski](https://github.com/iankouls-aws) and
+[Abhijeet Patil](https://github.com/prajwalendra).
+
+[![contributors](https://contrib.rocks/image?repo=awslabs/do-agent-aws&max=2000)](https://github.com/awslabs/do-agent-aws/graphs/contributors)
+
+Contributions of all kinds are welcome! Check out our [contributor guide](CONTRIBUTING.md) for more information. This
+project has adopted the [Amazon Open Source Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License and third-party software
 
