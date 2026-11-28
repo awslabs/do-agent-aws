@@ -1,0 +1,42 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${APP_NAME}
+  namespace: ${NAMESPACE}
+  labels:
+    app: ${APP_NAME}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ${APP_NAME}
+  minReplicas: 1
+  # One replica: each replica is a separate agent with its own loop and Slack responder (duplicate replies)
+  maxReplicas: 1
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+#  - type: Object
+#    object:
+#      metric:
+#        name: requests-per-second
+#      describedObject:
+#        apiVersion: v1
+#        kind: Service
+#        name: ${APP_NAME}
+#      target:
+#        type: Value
+#        value: 10
+#  - type: Pods
+#    pods:
+#      metric:
+#        name: packets-per-second
+#      target:
+#        type: AverageValue
+#        averageValue: 1k

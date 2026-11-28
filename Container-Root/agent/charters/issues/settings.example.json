@@ -1,0 +1,7 @@
+{
+ "_note": "The issues spoke's settings: copy this file to /wd/issues/settings.json and edit it. repositories: owner/name of each repository whose open issues and pull requests the spoke reads; ISSUES_REPOS (words separated by spaces or commas) adds to them. authored_by_me: also read the open items the login wrote or commented on anywhere (the default when no repository is named). max_items: at most this many items per list or search. bots: more logins whose comments never count as a word owed a reply (logins ending in [bot] never count). The vendored issues tracker, when the image carries it, scans the login's own items by its own rules and reads none of these keys.",
+ "repositories": ["owner/repository"],
+ "authored_by_me": false,
+ "max_items": 30,
+ "bots": []
+}

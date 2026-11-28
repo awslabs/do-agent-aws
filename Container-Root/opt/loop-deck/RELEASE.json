@@ -1,0 +1,12 @@
+{
+  "source_sha": "4c878e19dc21c25280cbd80ac776393b01aa3794",
+  "source_tree": "785afbda72872aceb6be94d95c4352da93df69c5",
+  "deck_version": "1.7.1",
+  "cut_at": "2026-11-26T10:13:07Z",
+  "tool": "cut.sh",
+  "features": {
+    "harness_mode": true,
+    "act_token": true,
+    "relative_urls": true
+  }
+}

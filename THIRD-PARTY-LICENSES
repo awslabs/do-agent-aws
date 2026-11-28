@@ -1,0 +1,895 @@
+## Software bill of materials (SBOM) of the container image do-agent-aws, build 202611280132
+## Generated 2026-11-28T01:37:13Z by /sbom.sh (/agent/sbom.py); regenerate in a running container with: /sbom.sh [output file]
+## One line per third-party component the image carries: <name> <version> - <license>. A license the generator could not
+## determine reads UNKNOWN (<why>); no component is left out. Four sources, each its own section below:
+## components: apt 220; npm 375; python 245; tools 36; total 876; UNKNOWN 1
+## The body after this header (from the first empty line on) is the same for the same image - sorted, no timestamp - so a
+## regenerated file compares body to body (/test-sbom.sh). The committed copy is THIRD-PARTY-LICENSES at the repository root,
+## written from the image by ./build.sh after every build (docs/manual/supply-chain.md "Software bill of materials").
+## Not in the image, so not in this list: the optional sidecar stacks ./run.sh starts only when switched on - the Plane board
+## (makeplane/plane-{backend,frontend,space,admin,live,proxy}:v1.4.2 under the AGPL-3.0, and its datastore images under their own
+## licenses; UI_PLANE, off by default; docs/manual/boards.md "Plane board").
+
+# apt packages (dpkg): every installed package, with the licenses its /usr/share/doc/<package>/copyright names
+adduser 3.118ubuntu5 - GPL-2
+apt 2.4.15ubuntu0.1 - GPL-2
+base-files 12ubuntu4.7 - GPL
+base-passwd 3.5.52build1 - GPL-2, public-domain
+bash 5.1-6ubuntu1.1 - GPL-3
+bsdutils 1:2.37.2-4ubuntu3.6 - BSD-2-clause, BSD-3-clause, BSD-4-clause, GPL-2, GPL-2+, GPL-3+, LGPL, LGPL-2+, LGPL-2.1+, LGPL-3+, MIT, public-domain
+ca-certificates 20260816ubuntu0.22.04.2 - GPL-2+, MPL-2.0
+coreutils 8.32-4.1ubuntu1.4 - GPL-3
+curl 7.81.0-1ubuntu1.30 - BSD-3-Clause, BSD-4-Clause, curl, ISC, other, public-domain
+dash 0.5.11+git20210903+057cd650a4ed-3build1 - BSD-3-Clause, Expat, FSFUL, FSFULLR, GPL-2+, GPL-2+ or BSD-3-clause, public-domain
+debconf 1.5.79ubuntu1 - BSD-2-clause
+debianutils 5.5-1ubuntu2 - GPL-2
+diffutils 1:3.8-0ubuntu2.1 - GFDL, GPL
+dpkg 1.21.1ubuntu2.6 - BSD-2-clause, GPL-2, GPL-2+, public-domain-md5, public-domain-s-s-d
+e2fsprogs 1.46.5-2ubuntu1.2 - GPL-2, LGPL-2
+findutils 4.8.0-1ubuntu3 - GFDL-1.3, GPL-3
+fontconfig-config 2.13.1-4.2ubuntu5 - HPND-sell-variant (license text)
+fonts-dejavu-core 2.37-2build1 - bitstream-vera, GPL-2+
+gcc-12-base:amd64 12.3.0-1ubuntu1~22.04.3 - Artistic, GFDL-1.2, GPL, GPL-2, GPL-3, LGPL
+gh 2.106.0 - MIT (third-party.txt: no copyright file)
+git 1:2.34.1-1ubuntu1.18 - Apache-2.0, Boost, dlmalloc, EDL-1.0, Expat, GPL-1+ or Artistic-1, GPL-2, GPL-2+, ISC, LGPL-2+, LGPL-2.1+, mingw-runtime
+git-man 1:2.34.1-1ubuntu1.18 - Apache-2.0, Boost, dlmalloc, EDL-1.0, Expat, GPL-1+ or Artistic-1, GPL-2, GPL-2+, ISC, LGPL-2+, LGPL-2.1+, mingw-runtime
+gpgv 2.2.27-3ubuntu2.5 - BSD-3-clause, CC0-1.0, Expat, GPL-3+, GPL-3+ or BSD-3-clause, LGPL-2.1+, LGPL-3+, permissive, RFC-Reference, TinySCHEME
+grep 3.7-1build1 - GPL-3+
+gzip 1.10-4ubuntu4.2 - FSF-manpages, GFDL-1.3+-no-invariant, GPL-3+
+hostname 3.23ubuntu2 - GPL-2
+init-system-helpers 1.62 - BSD-3-clause, GPL-2+
+iproute2 5.15.0-1ubuntu2.2 - GPL-2
+less 590-1ubuntu0.22.04.3 - GPL-3
+libacl1:amd64 2.3.1-1 - GPL-2+, LGPL-2+
+libapt-pkg6.0:amd64 2.4.15ubuntu0.1 - GPL-2
+libatm1:amd64 1:2.5.1-4build2 - GPL-2
+libattr1:amd64 1:2.5.1-1ubuntu0.1 - GPL-2+, LGPL-2+
+libaudit-common 1:3.0.7-1ubuntu0.1 - GPL-2, LGPL-2.1
+libaudit1:amd64 1:3.0.7-1ubuntu0.1 - GPL-2, LGPL-2.1
+libblkid1:amd64 2.37.2-4ubuntu3.6 - BSD-2-clause, BSD-3-clause, BSD-4-clause, GPL-2, GPL-2+, GPL-3+, LGPL, LGPL-2+, LGPL-2.1+, LGPL-3+, MIT, public-domain
+libbpf0:amd64 1:0.5.0-1ubuntu22.04.1 - BSD-2-Clause, GPL-2 with Linux-syscall-note exception, GPL-2+, GPL-2.0, LGPL-2.1, LGPL-2.1 or BSD-2-Clause
+libbrotli1:amd64 1.0.9-2ubuntu0.1 - MIT
+libbsd0:amd64 0.11.5-1 - Beerware, BSD-2-clause, BSD-2-clause-author, BSD-2-clause-NetBSD, BSD-2-clause-verbatim, BSD-3-clause, BSD-3-clause-author, BSD-3-clause-John-Birrell, BSD-3-clause-Regents, BSD-4-clause-Christopher-G-Demetriou, BSD-4-clause-Niels-Provos, BSD-5-clause-Peter-Wemm, Expat, ISC, ISC-Original, public-domain
+libbz2-1.0:amd64 1.0.8-5ubuntu0.1 - BSD-variant, GPL-2
+libc-bin 2.35-0ubuntu3.18 - GFDL-1.3, GPL-2, LGPL-2.1
+libc6:amd64 2.35-0ubuntu3.18 - GFDL-1.3, GPL-2, LGPL-2.1
+libcap-ng0:amd64 0.7.9-2.2build3 - GPL-2, GPL-3, LGPL-2.1
+libcap2-bin 1:2.44-1ubuntu0.22.04.3 - BSD-3-clause, BSD-3-clause or GPL-2, BSD-3-clause or GPL-2+, GPL-2, GPL-2+
+libcap2:amd64 1:2.44-1ubuntu0.22.04.3 - BSD-3-clause, BSD-3-clause or GPL-2, BSD-3-clause or GPL-2+, GPL-2, GPL-2+
+libcbor0.8:amd64 0.8.0-2ubuntu1 - Apache-2.0, Expat
+libcom-err2:amd64 1.46.5-2ubuntu1.2 - HPND (license text)
+libcrypt1:amd64 1:4.4.27-1 - Public domain
+libcurl3-gnutls:amd64 7.81.0-1ubuntu1.30 - BSD-3-Clause, BSD-4-Clause, curl, ISC, other, public-domain
+libcurl4:amd64 7.81.0-1ubuntu1.30 - BSD-3-Clause, BSD-4-Clause, curl, ISC, other, public-domain
+libdb5.3:amd64 5.3.28+dfsg1-0.8ubuntu3 - BSD, Sleepycat (license text)
+libdebconfclient0:amd64 0.261ubuntu1 - public domain
+libdeflate0:amd64 1.10-2 - Expat
+libedit2:amd64 3.1-20210910-1build1 - BSD-3-clause
+libelf1:amd64 0.186-1ubuntu0.2 - GPL-2, GPL-3, LGPL-3
+liberror-perl 0.17029-1 - Artistic, Artistic or GPL-1+, GPL-1+, MIT/X11
+libev4:amd64 1:4.33-1 - BSD-2-clause, BSD-2-clause or GPL-2+, GPL-2+
+libevent-core-2.1-7:amd64 2.1.12-stable-1ubuntu0.2 - BSD-2-clause, BSD-3-clause, BSD-3-Clause~Kitware, BSL, curl, Expat, FSFUL, FSFULLR, FSFULLR-No-Warranty, GPL-2+, GPL-3+, ISC
+libexpat1:amd64 2.4.7-1ubuntu0.10 - MIT
+libext2fs2:amd64 1.46.5-2ubuntu1.2 - GPL-2, LGPL-2
+libffi8:amd64 3.4.2-4 - GPL
+libfido2-1:amd64 1.10.0-1 - BSD-2-clause, ISC, public-domain
+libfontconfig1:amd64 2.13.1-4.2ubuntu5 - HPND-sell-variant (license text)
+libfreetype6:amd64 2.11.1+dfsg-1ubuntu0.4 - BSD-3-Clause, BSL-1.0, FSFAP, FTL, GPL-2+, GPL-3+, MIT, OpenGroup-BSD-like, Public-Domain, Zlib
+libgcc-s1:amd64 12.3.0-1ubuntu1~22.04.3 - Artistic, GFDL-1.2, GPL, GPL-2, GPL-3, LGPL
+libgcrypt20:amd64 1.9.4-3ubuntu3.3 - GPL-2, LGPL
+libgd3:amd64 2.3.0-2ubuntu2.3 - BSD-3-clause, GAP~configure, GAP~Makefile.in, GD, GPL-2+, GPL-2+ with Autoconf exception, HPND, MIT, WEBP, XFIG
+libgdbm-compat4:amd64 1.23-1 - GFDL-NIV-1.3+, GPL-2+, GPL-3+
+libgdbm6:amd64 1.23-1 - GFDL-NIV-1.3+, GPL-2+, GPL-3+
+libgmp10:amd64 2:6.2.1+dfsg-3ubuntu1 - GPL, GPL-2, GPL-3, LGPL-3
+libgnutls30:amd64 3.7.3-4ubuntu1.9 - Apache-2.0, GFDL-1.3, GPL, GPL-3, LGPL, LGPL-3
+libgpg-error0:amd64 1.43-3 - BSD-3-clause, g10-permissive, GPL-3+, LGPL-2.1+, LGPL-2.1+ or BSD-3-clause
+libgpm2:amd64 1.20.7-10build1 - GPL-2.0+, GPL-3.0+
+libgssapi-krb5-2:amd64 1.19.2-2ubuntu0.12 - GPL-2
+libhogweed6:amd64 3.7.3-1build2 - Expat, GAP, GPL-2, GPL-2+, GPL-3+, GPL-3+ with Autoconf exception, LGPL-2+, LGPL-3+, LGPL-3+ or GPL-2+, public-domain
+libicu70:amd64 70.1-2 - GPL-3, MIT
+libidn2-0:amd64 2.3.2-2build1 - GPL-2+, GPL-3+, LGPL-3+, LGPL-3+ or GPL-2+, Unicode
+libjbig0:amd64 2.1-3.1ubuntu0.22.04.1 - GPL-2+
+libjpeg-turbo8:amd64 2.1.2-0ubuntu1 - LGPL-2.1
+libjpeg8:amd64 8c-2ubuntu10 - LGPL-2.1
+libjson-c5:amd64 0.15-3~ubuntu1.22.04.2 - Expat
+libk5crypto3:amd64 1.19.2-2ubuntu0.12 - GPL-2
+libkeyutils1:amd64 1.6.1-2ubuntu3 - GPL-2+, LGPL-2+
+libkrb5-3:amd64 1.19.2-2ubuntu0.12 - GPL-2
+libkrb5support0:amd64 1.19.2-2ubuntu0.12 - GPL-2
+libldap-2.5-0:amd64 2.5.20+dfsg-0ubuntu0.22.04.1 - MIT, BSD, OpenLDAP (license text)
+libldap-common 2.5.20+dfsg-0ubuntu0.22.04.1 - MIT, BSD, OpenLDAP (license text)
+liblz4-1:amd64 1.9.3-2build2 - BSD-2-clause, GPL-2, GPL-2+
+liblzma5:amd64 5.2.5-2ubuntu1.2 - Autoconf, config-h, GPL-2, GPL-2+, LGPL-2.1+, noderivs, none, PD, PD-debian, permissive-fsf, permissive-nowarranty, probably-PD
+libmaxminddb0:amd64 1.5.2-1build2 - Apache-2.0, BSD-2-clause, BSD-3-clause, BSD-4-clause, CC-BY-SA-3.0, GPL-2+
+libmd0:amd64 1.0.4-1build1 - Beerware, BSD-2-clause, BSD-2-clause-NetBSD, BSD-3-clause, BSD-3-clause-Aaron-D-Gifford, ISC, public-domain-md4, public-domain-md5, public-domain-sha1
+libmnl0:amd64 1.0.4-3build2 - GPL-2+, LGPL-2.1
+libmount1:amd64 2.37.2-4ubuntu3.6 - BSD-2-clause, BSD-3-clause, BSD-4-clause, GPL-2, GPL-2+, GPL-3+, LGPL, LGPL-2+, LGPL-2.1+, LGPL-3+, MIT, public-domain
+libmpdec3:amd64 2.5.1-2build2 - BSD, GPL-2+
+libncurses6:amd64 6.3-2ubuntu0.3 - BSD-3-clause, MIT/X11, X11
+libncursesw6:amd64 6.3-2ubuntu0.3 - BSD-3-clause, MIT/X11, X11
+libnettle8:amd64 3.7.3-1build2 - Expat, GAP, GPL-2, GPL-2+, GPL-3+, GPL-3+ with Autoconf exception, LGPL-2+, LGPL-3+, LGPL-3+ or GPL-2+, public-domain
+libnghttp2-14:amd64 1.43.0-1ubuntu0.4 - all-permissive, BSD-2-clause, Expat, GPL-3+ with autoconf exception, MIT, SIL-OFL-1.1
+libnginx-mod-http-geoip2 1.18.0-6ubuntu14.24 - BSD-2-clause, BSD-3-clause, BSD-4-clause, Expat
+libnginx-mod-http-image-filter 1.18.0-6ubuntu14.24 - BSD-2-clause, BSD-3-clause, BSD-4-clause, Expat
+libnginx-mod-http-xslt-filter 1.18.0-6ubuntu14.24 - BSD-2-clause, BSD-3-clause, BSD-4-clause, Expat
+libnginx-mod-mail 1.18.0-6ubuntu14.24 - BSD-2-clause, BSD-3-clause, BSD-4-clause, Expat
+libnginx-mod-stream 1.18.0-6ubuntu14.24 - BSD-2-clause, BSD-3-clause, BSD-4-clause, Expat
+libnginx-mod-stream-geoip2 1.18.0-6ubuntu14.24 - BSD-2-clause, BSD-3-clause, BSD-4-clause, Expat
+libnsl2:amd64 1.3.0-2build2 - BSD-3-clause, GPL-2+-autoconf-exception, GPL-2+-libtool-exception, GPL-3+-autoconf-exception, LGPL-2.1, LGPL-2.1+, MIT, permissive-autoconf-m4, permissive-autoconf-m4-no-warranty, permissive-configure, permissive-fsf, permissive-makefile-in
+libp11-kit0:amd64 0.24.0-6ubuntu0.1 - Apache-2.0, BSD-3-Clause, ISC, ISC+IBM, LGPL-2.1+, permissive-like-automake-output, same-as-rest-of-p11kit
+libpam-cap:amd64 1:2.44-1ubuntu0.22.04.3 - BSD-3-clause, BSD-3-clause or GPL-2, BSD-3-clause or GPL-2+, GPL-2, GPL-2+
+libpam-modules-bin 1.4.0-11ubuntu2.8 - GPL
+libpam-modules:amd64 1.4.0-11ubuntu2.8 - GPL
+libpam-runtime 1.4.0-11ubuntu2.8 - GPL
+libpam0g:amd64 1.4.0-11ubuntu2.8 - GPL
+libpcre2-8-0:amd64 10.39-3ubuntu0.2 - BSD License, public domain
+libpcre3:amd64 2:8.39-13ubuntu0.22.04.1 - BSD License
+libperl5.34:amd64 5.34.0-3ubuntu1.10 - Artistic, Artistic or GPL-1+ or Artistic-dist, Artistic-2, Artistic-dist, BSD-3-clause, BSD-3-clause-GENERIC, BSD-3-clause-with-weird-numbering, BSD-4-clause-POWERDOG, BZIP, CC0-1.0, DONT-CHANGE-THE-GPL, Expat, Expat or GPL-1+ or Artistic, GPL-1+, GPL-1+ or Artistic, GPL-1+ or Artistic or Artistic-dist, GPL-1+ or Artistic,, GPL-2+, GPL-2+ or Artistic, GPL-3+-WITH-BISON-EXCEPTION, HSIEH-BSD, HSIEH-DERIVATIVE, LGPL-2.1, REGCOMP, REGCOMP,, RRA-KEEP-THIS-NOTICE, SDBM-PUBLIC-DOMAIN, TEXT-TABS, Unicode, ZLIB
+libpng16-16:amd64 1.6.37-3ubuntu0.7 - Apache-2.0, BSD-3-clause, BSD-like-with-advertising-clause, expat, GPL-2+, GPL-2+ or BSD-like-with-advertising-clause, libpng, libpng OR Apache-2.0 OR BSD-3-clause
+libprocps8:amd64 2:3.3.17-6ubuntu2.1 - GPL-2.0+, LGPL-2.0+, LGPL-2.1+
+libpsl5:amd64 0.21.0-1.2build2 - Chromium, MIT
+libpython3-stdlib:amd64 3.10.6-1~22.04.1 - GPL-compatible, GPL-compatible License
+libpython3.10-minimal:amd64 3.10.12-1~22.04.18 - GPL-2
+libpython3.10-stdlib:amd64 3.10.12-1~22.04.18 - GPL-2
+libpython3.10:amd64 3.10.12-1~22.04.18 - GPL-2
+libreadline8:amd64 8.1.2-1 - GFDL, GPL-3
+librtmp1:amd64 2.4+20151223.gitfa8646d.1-2build4 - GPL-2, LGPL-2.1
+libsasl2-2:amd64 2.1.27+dfsg2-3ubuntu1.2 - BSD-2-clause, BSD-2.2-clause, BSD-3-clause, BSD-3-clause-JANET, BSD-3-clause-PADL, BSD-4-clause, BSD-4-clause-UC, FSFULLR, GPL-3+, IBM-as-is, MIT-CMU, MIT-Export, MIT-OpenVision, OpenLDAP, OpenSSL, RSA-MD, SSLeay
+libsasl2-modules-db:amd64 2.1.27+dfsg2-3ubuntu1.2 - BSD-2-clause, BSD-2.2-clause, BSD-3-clause, BSD-3-clause-JANET, BSD-3-clause-PADL, BSD-4-clause, BSD-4-clause-UC, FSFULLR, GPL-3+, IBM-as-is, MIT-CMU, MIT-Export, MIT-OpenVision, OpenLDAP, OpenSSL, RSA-MD, SSLeay
+libsasl2-modules:amd64 2.1.27+dfsg2-3ubuntu1.2 - BSD-2-clause, BSD-2.2-clause, BSD-3-clause, BSD-3-clause-JANET, BSD-3-clause-PADL, BSD-4-clause, BSD-4-clause-UC, FSFULLR, GPL-3+, IBM-as-is, MIT-CMU, MIT-Export, MIT-OpenVision, OpenLDAP, OpenSSL, RSA-MD, SSLeay
+libseccomp2:amd64 2.5.3-2ubuntu3~22.04.1 - LGPL-2.1
+libselinux1:amd64 3.3-1build2 - GPL-2, LGPL-2.1
+libsemanage-common 3.3-1build2 - GPL, LGPL
+libsemanage2:amd64 3.3-1build2 - GPL, LGPL
+libsepol2:amd64 3.3-1build1 - GPL, LGPL
+libsmartcols1:amd64 2.37.2-4ubuntu3.6 - BSD-2-clause, BSD-3-clause, BSD-4-clause, GPL-2, GPL-2+, GPL-3+, LGPL, LGPL-2+, LGPL-2.1+, LGPL-3+, MIT, public-domain
+libsodium23:amd64 1.0.18-1ubuntu0.22.04.1 - BSD-2-clause, CC0, GPL-2+, ISC, MIT, public-domain
+libsqlite3-0:amd64 3.37.2-2ubuntu0.8 - GPL-2+, public-domain
+libss2:amd64 1.46.5-2ubuntu1.2 - HPND (license text)
+libssh-4:amd64 0.9.6-2ubuntu0.22.04.9 - BSD-2-clause, BSD-3-clause, LGPL-2.1, LGPL-2.1+~OpenSSL, LGPL-2.1+~OpenSSL or BSD-2-clause or BSD-3-clause, public-domain
+libssl3:amd64 3.0.2-0ubuntu1.30 - Apache-2.0, Artistic, Artistic or GPL-1+, GPL-1+
+libstdc++6:amd64 12.3.0-1ubuntu1~22.04.3 - Artistic, GFDL-1.2, GPL, GPL-2, GPL-3, LGPL
+libsystemd0:amd64 249.11-0ubuntu3.23 - CC0-1.0, Expat, GPL-2, GPL-2 with Linux-syscall-note exception, GPL-2+, LGPL-2.1+, public-domain
+libtasn1-6:amd64 4.18.0-4ubuntu0.2 - GFDL-1.3, GPL-3, LGPL, LGPL-2.1
+libtiff5:amd64 4.3.0-6ubuntu0.14 - Hylafax
+libtinfo6:amd64 6.3-2ubuntu0.3 - BSD-3-clause, MIT/X11, X11
+libtirpc-common 1.3.2-2ubuntu0.1 - __AUTO_PERMISSIVE__, BSD-2-Clause, BSD-3-Clause, BSD-4-Clause, GPL-2, LGPL-2.1+, PERMISSIVE
+libtirpc3:amd64 1.3.2-2ubuntu0.1 - __AUTO_PERMISSIVE__, BSD-2-Clause, BSD-3-Clause, BSD-4-Clause, GPL-2, LGPL-2.1+, PERMISSIVE
+libudev1:amd64 249.11-0ubuntu3.23 - CC0-1.0, Expat, GPL-2, GPL-2 with Linux-syscall-note exception, GPL-2+, LGPL-2.1+, public-domain
+libunistring2:amd64 1.0-1 - FreeSoftware, GFDL-1.2+, GPL-2+, GPL-2+ with distribution exception, GPL-3+, GPL-3+ or GFDL-1.2+, LGPL-3+, LGPL-3+ or GPL-2+, MIT
+libutempter0:amd64 1.2.1-2build2 - LGPL-2.1
+libuuid1:amd64 2.37.2-4ubuntu3.6 - BSD-2-clause, BSD-3-clause, BSD-4-clause, GPL-2, GPL-2+, GPL-3+, LGPL, LGPL-2+, LGPL-2.1+, LGPL-3+, MIT, public-domain
+libuv1:amd64 1.43.0-1ubuntu0.1 - Apache-2.0, BSD-1-clause, BSD-2-clause, BSD-3-clause, CC-BY-4.0, Expat, GPL3+ with autoconf exception, ISC
+libwebp7:amd64 1.2.2-2ubuntu0.22.04.2 - Apache-2.0
+libx11-6:amd64 2:1.7.5-1ubuntu0.4 - MIT License
+libx11-data 2:1.7.5-1ubuntu0.4 - MIT License
+libxau6:amd64 1:1.0.9-1build5 - HPND-sell-variant (license text)
+libxcb1:amd64 1.14-3ubuntu3 - MIT (license text)
+libxdmcp6:amd64 1:1.1.3-0ubuntu5 - HPND-sell-variant (license text)
+libxext6:amd64 2:1.3.4-1build1 - MIT, HPND-sell-variant (license text)
+libxml2:amd64 2.9.13+dfsg-1ubuntu0.14 - ISC, MIT-1
+libxmuu1:amd64 2:1.1.3-3 - MIT, HPND-sell-variant (license text)
+libxpm4:amd64 1:3.5.12-1ubuntu0.22.04.4 - MIT (license text)
+libxslt1.1:amd64 1.1.34-4ubuntu0.22.04.5 - MIT (license text)
+libxtables12:amd64 1.8.7-1ubuntu5.2 - Artistic, custom, GPL-2, GPL-2+
+libxxhash0:amd64 0.8.1-1 - BSD-2-clause, GPL-2
+libyaml-0-2:amd64 0.2.2-1build2 - Expat, permissive
+libzstd1:amd64 1.4.8+dfsg-3build1 - BSD-3-clause, Expat, GPL-2, zlib
+login 1:4.8.1-2ubuntu2.2 - GPL-2
+logsave 1.46.5-2ubuntu1.2 - GPL-2, LGPL-2
+lsb-base 11.1.0ubuntu4 - BSD-3-clause, GPL-2
+mawk 1.3.4.20200120-3 - GPL-2
+media-types 7.0.0 - ad-hoc
+mount 2.37.2-4ubuntu3.6 - BSD-2-clause, BSD-3-clause, BSD-4-clause, GPL-2, GPL-2+, GPL-3+, LGPL, LGPL-2+, LGPL-2.1+, LGPL-3+, MIT, public-domain
+ncurses-base 6.3-2ubuntu0.3 - BSD-3-clause, MIT/X11, X11
+ncurses-bin 6.3-2ubuntu0.3 - BSD-3-clause, MIT/X11, X11
+netbase 6.3 - GPL-2
+nginx-common 1.18.0-6ubuntu14.24 - BSD-2-clause, BSD-3-clause, BSD-4-clause, Expat
+nginx-core 1.18.0-6ubuntu14.24 - BSD-2-clause, BSD-3-clause, BSD-4-clause, Expat
+openssh-client 1:8.9p1-3ubuntu0.18 - BSD-2-clause, BSD-3-clause, Expat-with-advertising-restriction, Mazieres-BSD-style, OpenSSH, Powell-BSD-style, public-domain
+openssl 3.0.2-0ubuntu1.30 - Apache-2.0, Artistic, Artistic or GPL-1+, GPL-1+
+passwd 1:4.8.1-2ubuntu2.2 - GPL-2
+patch 2.7.6-7build2 - GPL
+perl 5.34.0-3ubuntu1.10 - Artistic, Artistic or GPL-1+ or Artistic-dist, Artistic-2, Artistic-dist, BSD-3-clause, BSD-3-clause-GENERIC, BSD-3-clause-with-weird-numbering, BSD-4-clause-POWERDOG, BZIP, CC0-1.0, DONT-CHANGE-THE-GPL, Expat, Expat or GPL-1+ or Artistic, GPL-1+, GPL-1+ or Artistic, GPL-1+ or Artistic or Artistic-dist, GPL-1+ or Artistic,, GPL-2+, GPL-2+ or Artistic, GPL-3+-WITH-BISON-EXCEPTION, HSIEH-BSD, HSIEH-DERIVATIVE, LGPL-2.1, REGCOMP, REGCOMP,, RRA-KEEP-THIS-NOTICE, SDBM-PUBLIC-DOMAIN, TEXT-TABS, Unicode, ZLIB
+perl-base 5.34.0-3ubuntu1.10 - Artistic, Artistic or GPL-1+ or Artistic-dist, Artistic-2, Artistic-dist, BSD-3-clause, BSD-3-clause-GENERIC, BSD-3-clause-with-weird-numbering, BSD-4-clause-POWERDOG, BZIP, CC0-1.0, DONT-CHANGE-THE-GPL, Expat, Expat or GPL-1+ or Artistic, GPL-1+, GPL-1+ or Artistic, GPL-1+ or Artistic or Artistic-dist, GPL-1+ or Artistic,, GPL-2+, GPL-2+ or Artistic, GPL-3+-WITH-BISON-EXCEPTION, HSIEH-BSD, HSIEH-DERIVATIVE, LGPL-2.1, REGCOMP, REGCOMP,, RRA-KEEP-THIS-NOTICE, SDBM-PUBLIC-DOMAIN, TEXT-TABS, Unicode, ZLIB
+perl-modules-5.34 5.34.0-3ubuntu1.10 - Artistic, Artistic or GPL-1+ or Artistic-dist, Artistic-2, Artistic-dist, BSD-3-clause, BSD-3-clause-GENERIC, BSD-3-clause-with-weird-numbering, BSD-4-clause-POWERDOG, BZIP, CC0-1.0, DONT-CHANGE-THE-GPL, Expat, Expat or GPL-1+ or Artistic, GPL-1+, GPL-1+ or Artistic, GPL-1+ or Artistic or Artistic-dist, GPL-1+ or Artistic,, GPL-2+, GPL-2+ or Artistic, GPL-3+-WITH-BISON-EXCEPTION, HSIEH-BSD, HSIEH-DERIVATIVE, LGPL-2.1, REGCOMP, REGCOMP,, RRA-KEEP-THIS-NOTICE, SDBM-PUBLIC-DOMAIN, TEXT-TABS, Unicode, ZLIB
+procps 2:3.3.17-6ubuntu2.1 - GPL-2.0+, LGPL-2.0+, LGPL-2.1+
+publicsuffix 20211207.1025-1 - CC0, MPL-2.0
+python3 3.10.6-1~22.04.1 - GPL-compatible, GPL-compatible License
+python3-distutils 3.10.8-1~22.04 - GPL-compatible, GPL-compatible License
+python3-lib2to3 3.10.8-1~22.04 - GPL-compatible, GPL-compatible License
+python3-minimal 3.10.6-1~22.04.1 - GPL-compatible, GPL-compatible License
+python3-pip 22.0.2+dfsg-1ubuntu0.7 - Apache-2.0, Apache-2.0 OR BSD-2, BSD-2, BSD-3, Expat, ISC, LGPL-2.1+, MPL-2, Python
+python3-pip-whl 22.0.2+dfsg-1ubuntu0.7 - Apache-2.0, Apache-2.0 OR BSD-2, BSD-2, BSD-3, Expat, ISC, LGPL-2.1+, MPL-2, Python
+python3-pkg-resources 59.6.0-1.2ubuntu0.22.04.3 - Apache-2.0
+python3-setuptools 59.6.0-1.2ubuntu0.22.04.3 - Apache-2.0
+python3-setuptools-whl 59.6.0-1.2ubuntu0.22.04.3 - Apache-2.0
+python3-venv 3.10.6-1~22.04.1 - GPL-compatible, GPL-compatible License
+python3-wheel 0.37.1-2ubuntu0.22.04.1 - Expat, GPL-3
+python3-yaml 5.4.1-1ubuntu1 - MIT (license text)
+python3.10 3.10.12-1~22.04.18 - GPL-2
+python3.10-minimal 3.10.12-1~22.04.18 - GPL-2
+python3.10-venv 3.10.12-1~22.04.18 - GPL-2
+readline-common 8.1.2-1 - GFDL, GPL-3
+sed 4.8-1ubuntu2.1 - GPL-3
+sensible-utils 0.0.17 - All-permissive, configure, GPL-2+, installsh
+sudo 1.9.9-1ubuntu2.7 - BSD-2-Clause, BSD-3-Clause, ISC, other, Zlib
+sysvinit-utils 3.01-1ubuntu1 - GPL-2+
+tar 1.34+dfsg-1ubuntu0.1.22.04.6 - GPL-2, GPL-3
+tmux 3.2a-4ubuntu0.3 - BSD-2, BSD-3
+ttyd 1.6.3+20210924-1build1 - BSD-3, MIT
+tzdata 2026f-0ubuntu0.22.04.1 - public domain
+ubuntu-keyring 2021.03.26 - GPL
+ucf 3.0043 - GPL-2
+unzip 6.0-26ubuntu3.2 - Info-ZIP (license text)
+usrmerge 25ubuntu2 - GPL-2
+util-linux 2.37.2-4ubuntu3.6 - BSD-2-clause, BSD-3-clause, BSD-4-clause, GPL-2, GPL-2+, GPL-3+, LGPL, LGPL-2+, LGPL-2.1+, LGPL-3+, MIT, public-domain
+vim 2:8.2.3995-1ubuntu2.36 - Apache, Apache or Expat, Artistic-1, BSD-2-clause, BSD-3-clause, Compaq, EDL-1, Expat, Expat or GPL-2, Expat or Vim, GPL-1+, GPL-1+ or Artistic-1, GPL-2, GPL-2+, GPL-3+, LGPL-2.1+, OPL-1+, public-domain, SRA, UC, Vim, Vim-Regexp, X11, XPM
+vim-common 2:8.2.3995-1ubuntu2.36 - Apache, Apache or Expat, Artistic-1, BSD-2-clause, BSD-3-clause, Compaq, EDL-1, Expat, Expat or GPL-2, Expat or Vim, GPL-1+, GPL-1+ or Artistic-1, GPL-2, GPL-2+, GPL-3+, LGPL-2.1+, OPL-1+, public-domain, SRA, UC, Vim, Vim-Regexp, X11, XPM
+vim-runtime 2:8.2.3995-1ubuntu2.36 - Apache, Apache or Expat, Artistic-1, BSD-2-clause, BSD-3-clause, Compaq, EDL-1, Expat, Expat or GPL-2, Expat or Vim, GPL-1+, GPL-1+ or Artistic-1, GPL-2, GPL-2+, GPL-3+, LGPL-2.1+, OPL-1+, public-domain, SRA, UC, Vim, Vim-Regexp, X11, XPM
+wget 1.21.2-2ubuntu1.5 - GFDL-1.2, GPL-3
+xauth 1:1.1-1build2 - HPND-sell-variant (license text)
+xxd 2:8.2.3995-1ubuntu2.36 - Apache, Apache or Expat, Artistic-1, BSD-2-clause, BSD-3-clause, Compaq, EDL-1, Expat, Expat or GPL-2, Expat or Vim, GPL-1+, GPL-1+ or Artistic-1, GPL-2, GPL-2+, GPL-3+, LGPL-2.1+, OPL-1+, public-domain, SRA, UC, Vim, Vim-Regexp, X11, XPM
+zlib1g:amd64 1:1.2.11.dfsg-2ubuntu9.2 - Zlib
+
+# Node.js packages (npm): every package under a node_modules directory in the image, with the license its package.json declares
+@anthropic-ai/claude-agent-sdk 0.1.77 - Proprietary (Anthropic PBC, all rights reserved; the Legal Agreements at code.claude.com/docs/en/legal-and-compliance) (third-party.txt: package.json points at a file: SEE LICENSE IN README.md)
+@anthropic-ai/claude-code 2.1.327 - Proprietary (Anthropic PBC, all rights reserved; the Legal Agreements at code.claude.com/docs/en/legal-and-compliance) (third-party.txt: package.json points at a file: SEE LICENSE IN README.md)
+@anthropic-ai/claude-code-linux-x64 2.1.327 - Proprietary (Anthropic PBC, all rights reserved; the Legal Agreements at code.claude.com/docs/en/legal-and-compliance) (third-party.txt: package.json points at a file: SEE LICENSE IN LICENSE.md)
+@ast-grep/napi 0.31.1 - MIT
+@ast-grep/napi-linux-x64-gnu 0.31.1 - MIT
+@ast-grep/napi-linux-x64-musl 0.31.1 - MIT
+@better-auth/api-key 1.7.28 - MIT
+@better-auth/core 1.7.28 - MIT
+@better-auth/drizzle-adapter 1.7.28 - MIT
+@better-auth/kysely-adapter 1.7.28 - MIT
+@better-auth/memory-adapter 1.7.28 - MIT
+@better-auth/mongo-adapter 1.7.28 - MIT
+@better-auth/prisma-adapter 1.7.28 - MIT
+@better-auth/telemetry 1.7.28 - MIT
+@better-auth/utils 0.5.1 - MIT
+@better-fetch/fetch 1.3.3 - MIT
+@derekstride/tree-sitter-sql 0.3.11 - MIT
+@gar/promise-retry 1.0.3 - MIT
+@hono/node-server 1.19.17 - MIT
+@hono/node-server 2.1.7 - MIT
+@img/colour 1.1.0 - MIT
+@img/sharp-libvips-linux-x64 1.0.4 - LGPL-3.0-or-later
+@img/sharp-libvips-linux-x64 1.3.4 - LGPL-3.0-or-later
+@img/sharp-libvips-linuxmusl-x64 1.0.4 - LGPL-3.0-or-later
+@img/sharp-libvips-linuxmusl-x64 1.3.4 - LGPL-3.0-or-later
+@img/sharp-linux-x64 0.33.5 - Apache-2.0
+@img/sharp-linux-x64 0.35.5 - Apache-2.0
+@img/sharp-linuxmusl-x64 0.33.5 - Apache-2.0
+@img/sharp-linuxmusl-x64 0.35.5 - Apache-2.0
+@isaacs/fs-minipass 4.0.1 - ISC
+@isaacs/string-locale-compare 1.1.0 - ISC
+@modelcontextprotocol/sdk 1.32.2 - MIT
+@next/env 16.4.3 - MIT
+@noble/ciphers 2.4.0 - MIT
+@noble/hashes 2.4.0 - MIT
+@npmcli/agent 5.0.2 - ISC
+@npmcli/arborist 10.0.5 - ISC
+@npmcli/config 11.2.1 - ISC
+@npmcli/fs 6.0.0 - ISC
+@npmcli/git 8.0.0 - ISC
+@npmcli/installed-package-contents 5.0.0 - ISC
+@npmcli/map-workspaces 6.0.0 - ISC
+@npmcli/metavuln-calculator 10.0.0 - ISC
+@npmcli/name-from-folder 5.0.0 - ISC
+@npmcli/node-gyp 6.0.0 - ISC
+@npmcli/package-json 8.0.0 - ISC
+@npmcli/promise-spawn 10.0.1 - ISC
+@npmcli/query 5.0.0 - ISC
+@npmcli/redact 5.0.0 - ISC
+@npmcli/run-script 11.0.0 - ISC
+@sigstore/bundle 5.0.0 - Apache-2.0
+@sigstore/core 4.0.1 - Apache-2.0
+@sigstore/protobuf-specs 0.5.1 - Apache-2.0
+@sigstore/sign 5.0.0 - Apache-2.0
+@sigstore/tuf 5.0.0 - Apache-2.0
+@sigstore/verify 4.1.0 - Apache-2.0
+@standard-schema/spec 1.1.0 - MIT
+@swc/helpers 0.5.23 - Apache-2.0
+@tree-sitter-grammars/tree-sitter-lua 0.4.1 - MIT
+@tree-sitter-grammars/tree-sitter-markdown 0.3.2 - MIT
+@tree-sitter-grammars/tree-sitter-toml 0.7.0 - MIT
+@tree-sitter-grammars/tree-sitter-yaml 0.7.1 - MIT
+@tree-sitter-grammars/tree-sitter-zig 1.1.2 - MIT
+@tufjs/canonical-json 2.0.0 - MIT
+@tufjs/models 5.0.0 - MIT
+@types/better-sqlite3 7.6.13 - MIT
+@types/node 22.19.7 - MIT
+abbrev 5.0.0 - ISC
+accepts 2.0.0 - MIT
+adm-zip 0.6.1 - MIT
+agent-base 9.0.0 - MIT
+ajv 8.18.0 - MIT
+ajv 8.20.0 - MIT
+ajv-formats 3.0.1 - MIT
+aproba 2.1.0 - ISC
+archy 1.0.0 - MIT
+balanced-match 4.0.4 - MIT
+base64-js 1.5.1 - MIT
+better-auth 1.7.28 - MIT
+better-call 1.4.6 - MIT
+better-sqlite3 12.11.1 - MIT
+bin-links 7.0.1 - ISC
+binary-extensions 3.1.0 - MIT
+bindings 1.5.0 - MIT
+bl 4.1.0 - MIT
+body-parser 2.4.0 - MIT
+brace-expansion 5.0.12 - MIT
+buffer 5.7.1 - MIT
+bytes 3.1.2 - MIT
+cac 7.1.1 - MIT
+cacache 21.0.1 - ISC
+call-bind-apply-helpers 1.0.2 - MIT
+call-bound 1.0.4 - MIT
+chalk 5.6.2 - MIT
+chownr 1.1.4 - ISC
+chownr 3.0.0 - BlueOak-1.0.0
+ci-info 4.4.0 - MIT
+cidr-regex 6.0.0 - BSD-2-Clause
+client-only 0.0.1 - MIT
+cmd-shim 9.0.2 - ISC
+commander 12.1.0 - MIT
+common-ancestor-path 2.0.0 - BlueOak-1.0.0
+content-disposition 1.1.0 - MIT
+content-disposition 2.0.1 - MIT
+content-type 1.0.5 - MIT
+content-type 2.1.0 - MIT
+cookie 0.7.2 - MIT
+cookie-signature 1.2.2 - MIT
+corepack 0.36.0 - MIT
+cors 2.8.6 - MIT
+cross-spawn 7.0.6 - MIT
+cssesc 3.0.0 - MIT
+debug 4.4.3 - MIT
+decompress-response 6.0.0 - MIT
+deep-extend 0.6.0 - MIT
+defu 6.1.7 - MIT
+depd 2.0.0 - MIT
+detect-libc 2.1.2 - Apache-2.0
+diff 8.0.4 - BSD-3-Clause
+dunder-proto 1.0.1 - MIT
+ee-first 1.1.1 - MIT
+encodeurl 2.0.0 - MIT
+end-of-stream 1.4.5 - MIT
+env-paths 2.2.1 - MIT
+es-define-property 1.0.1 - MIT
+es-errors 1.3.0 - MIT
+es-object-atoms 1.1.2 - MIT
+escape-html 1.0.3 - MIT
+etag 1.8.1 - MIT
+eventsource 3.0.7 - MIT
+eventsource-parser 3.0.6 - MIT
+eventsource-parser 3.1.1 - MIT
+expand-template 2.0.3 - (MIT OR WTFPL)
+exponential-backoff 3.1.3 - Apache-2.0
+express 5.2.1 - MIT
+express 5.3.0 - MIT
+express-rate-limit 8.5.2 - MIT
+express-rate-limit 8.6.2 - MIT
+fast-deep-equal 3.1.3 - MIT
+fast-uri 3.1.7 - BSD-3-Clause
+fast-uri 3.1.9 - BSD-3-Clause
+fastest-levenshtein 1.0.16 - MIT
+fdir 6.5.0 - MIT
+file-uri-to-path 1.0.0 - MIT
+finalhandler 2.1.1 - MIT
+forwarded 0.2.0 - MIT
+fresh 2.0.0 - MIT
+fs-constants 1.0.0 - MIT
+fs-minipass 3.0.3 - ISC
+function-bind 1.1.2 - MIT
+get-intrinsic 1.3.0 - MIT
+get-proto 1.0.1 - MIT
+github-from-package 0.0.0 - MIT
+glob 13.0.6 - BlueOak-1.0.0
+gopd 1.2.0 - MIT
+graceful-fs 4.2.11 - ISC
+has-symbols 1.1.0 - MIT
+hasown 2.0.4 - MIT
+hono 4.13.18 - MIT
+hono 4.13.7 - MIT
+hosted-git-info 10.1.1 - ISC
+http-cache-semantics 4.3.0 - BSD-2-Clause
+http-errors 2.0.1 - MIT
+http-proxy-agent 9.1.0 - MIT
+https-proxy-agent 9.1.0 - MIT
+iconv-lite 0.7.3 - MIT
+ieee754 1.2.1 - BSD-3-Clause
+ignore-walk 9.0.0 - ISC
+inherits 2.0.4 - ISC
+ini 1.3.8 - ISC
+ini 7.0.0 - ISC
+init-package-json 9.0.0 - ISC
+ip-address 10.7.0 - MIT
+ip-address 10.7.5 - MIT
+ip-address 10.7.6 - MIT
+ipaddr.js 1.9.1 - MIT
+is-cidr 7.0.0 - BSD-2-Clause
+is-promise 4.0.0 - MIT
+isexe 2.0.0 - ISC
+isexe 4.0.0 - BlueOak-1.0.0
+jose 6.1.3 - MIT
+jose 6.2.10 - MIT
+jose 6.2.18 - MIT
+json-parse-even-better-errors 6.0.0 - MIT
+json-schema-traverse 1.0.0 - MIT
+json-schema-typed 8.0.2 - BSD-2-Clause
+json-stringify-nice 1.1.4 - ISC
+jsonc-parser 3.3.1 - MIT
+jsonparse 1.3.1 - MIT
+just-diff 6.0.2 - MIT
+just-diff-apply 5.5.0 - MIT
+kysely 0.29.9 - MIT
+libnpmaccess 11.0.0 - ISC
+libnpmdiff 9.0.5 - ISC
+libnpmexec 11.0.6 - ISC
+libnpmfund 8.0.5 - ISC
+libnpmorg 9.0.0 - ISC
+libnpmpack 10.0.5 - ISC
+libnpmpublish 12.0.1 - ISC
+libnpmsearch 10.0.0 - ISC
+libnpmteam 9.0.0 - ISC
+libnpmversion 9.0.0 - ISC
+lru-cache 11.5.2 - BlueOak-1.0.0
+make-fetch-happen 16.0.1 - ISC
+math-intrinsics 1.1.0 - MIT
+media-typer 1.1.0 - MIT
+media-typer 1.1.1 - MIT
+merge-descriptors 2.0.0 - MIT
+mime-db 1.54.0 - MIT
+mime-types 3.0.2 - MIT
+mimic-response 3.1.0 - MIT
+minimatch 10.2.5 - BlueOak-1.0.0
+minimist 1.2.8 - MIT
+minipass 3.3.6 - ISC
+minipass 7.1.3 - BlueOak-1.0.0
+minipass-collect 2.0.1 - ISC
+minipass-fetch 6.0.0 - MIT
+minipass-flush 1.0.6 - BlueOak-1.0.0
+minipass-pipeline 1.2.4 - ISC
+minipass-sized 2.0.0 - ISC
+minizlib 3.1.0 - MIT
+mkdirp-classic 0.5.3 - MIT
+ms 2.1.3 - MIT
+mute-stream 4.0.0 - ISC
+nan 2.27.0 - MIT
+nanostores 1.5.5 - MIT
+napi-build-utils 2.0.0 - MIT
+negotiator 1.0.0 - MIT
+negotiator 1.1.0 - MIT
+next 16.4.3 - MIT
+node-abi 3.87.0 - MIT
+node-addon-api 7.1.1 - MIT
+node-addon-api 8.8.0 - MIT
+node-gyp 13.0.0 - MIT
+node-gyp-build 4.8.4 - MIT
+nopt 10.0.1 - ISC
+npm 12.2.3 - Artistic-2.0
+npm-audit-report 8.0.0 - ISC
+npm-bundled 6.0.0 - ISC
+npm-install-checks 9.0.0 - BSD-2-Clause
+npm-normalize-package-bin 6.0.0 - ISC
+npm-package-arg 14.0.0 - ISC
+npm-packlist 11.3.0 - ISC
+npm-pick-manifest 12.0.0 - ISC
+npm-profile 13.0.1 - ISC
+npm-registry-fetch 20.0.1 - ISC
+npm-user-validate 5.0.0 - BSD-2-Clause
+object-assign 4.1.1 - MIT
+object-inspect 1.13.4 - MIT
+on-finished 2.4.1 - MIT
+once 1.4.0 - ISC
+p-map 7.0.5 - MIT
+pacote 22.0.1 - ISC
+parse-conflict-json 6.0.0 - ISC
+parseurl 1.3.3 - MIT
+path-key 3.1.1 - MIT
+path-scurry 2.0.2 - BlueOak-1.0.0
+path-to-regexp 8.4.0 - MIT
+path-to-regexp 8.4.2 - MIT
+picomatch 4.0.5 - MIT
+pkce-challenge 5.0.1 - MIT
+postcss-selector-parser 7.1.6 - MIT
+prebuild-install 7.1.3 - MIT
+proc-log 7.0.0 - ISC
+proggy 4.0.0 - ISC
+promise-all-reject-late 1.0.1 - ISC
+promise-call-limit 3.0.2 - ISC
+promzard 4.0.0 - ISC
+proxy-addr 2.0.8 - MIT
+proxy-agent-negotiate 1.1.0 - MIT
+pump 3.0.3 - MIT
+qrcode-terminal 0.12.0 - Apache 2.0
+qs 6.17.1 - BSD-3-Clause
+range-parser 1.2.1 - MIT
+range-parser 1.3.0 - MIT
+raw-body 3.0.2 - MIT
+rc 1.2.8 - (BSD-2-Clause OR MIT OR Apache-2.0)
+react 19.2.3 - MIT
+react-dom 19.2.3 - MIT
+read 6.0.0 - ISC
+read-cmd-shim 7.0.1 - ISC
+readable-stream 3.6.2 - MIT
+regexp-tree 0.1.27 - MIT
+require-from-string 2.0.2 - MIT
+rou3 0.9.2 - MIT
+router 2.2.0 - MIT
+safe-buffer 5.2.1 - MIT
+safe-regex 2.1.1 - MIT
+safer-buffer 2.1.2 - MIT
+semver 7.7.3 - ISC
+semver 7.8.5 - ISC
+semver 7.8.6 - ISC
+send 1.2.1 - MIT
+serve-static 2.2.1 - MIT
+set-cookie-parser 3.2.3 - MIT
+setprototypeof 1.2.0 - ISC
+sharp 0.35.5 - Apache-2.0
+shebang-command 2.0.0 - MIT
+shebang-regex 3.0.0 - MIT
+shell-quote 1.11.0 - MIT
+side-channel 1.1.1 - MIT
+side-channel-list 1.0.1 - MIT
+side-channel-map 1.0.1 - MIT
+side-channel-weakmap 1.0.2 - MIT
+signal-exit 4.1.0 - ISC
+sigstore 5.0.0 - Apache-2.0
+simple-concat 1.0.1 - MIT
+simple-get 4.0.1 - MIT
+smart-buffer 4.2.0 - MIT
+socks 2.8.9 - MIT
+socks-proxy-agent 10.1.0 - MIT
+spdx-exceptions 2.5.0 - CC-BY-3.0
+spdx-expression-parse 4.0.0 - MIT
+spdx-license-ids 3.0.23 - CC0-1.0
+ssri 14.0.0 - ISC
+statuses 2.0.2 - MIT
+string_decoder 1.3.0 - MIT
+strip-json-comments 2.0.1 - MIT
+styled-jsx 5.1.6 - MIT
+supports-color 10.2.2 - MIT
+tar 7.5.22 - BlueOak-1.0.0
+tar-fs 2.1.4 - MIT
+tar-stream 2.2.0 - MIT
+text-table 0.2.0 - MIT
+tiny-relative-date 2.0.2 - MIT
+tinyglobby 0.2.17 - MIT
+toidentifier 1.0.1 - MIT
+tree-sitter 0.25.0 - MIT
+tree-sitter-bash 0.25.1 - MIT
+tree-sitter-c 0.23.6 - MIT
+tree-sitter-c 0.24.1 - MIT
+tree-sitter-cli 0.23.2 - MIT
+tree-sitter-cli 0.26.9 - MIT
+tree-sitter-cpp 0.23.4 - MIT
+tree-sitter-css 0.20.0 - MIT
+tree-sitter-css 0.25.0 - MIT
+tree-sitter-go 0.25.0 - MIT
+tree-sitter-haskell 0.23.1 - MIT
+tree-sitter-java 0.23.5 - MIT
+tree-sitter-javascript 0.23.1 - MIT
+tree-sitter-javascript 0.25.0 - MIT
+tree-sitter-kotlin 0.3.8 - MIT
+tree-sitter-php 0.24.2 - MIT
+tree-sitter-python 0.25.0 - MIT
+tree-sitter-ruby 0.23.1 - MIT
+tree-sitter-rust 0.24.0 - MIT
+tree-sitter-scala 0.24.0 - MIT
+tree-sitter-scss 1.0.0 - MIT
+tree-sitter-swift 0.7.1 - MIT
+tree-sitter-typescript 0.23.2 - MIT
+treeverse 3.0.0 - ISC
+tuf-js 6.0.0 - MIT
+tunnel-agent 0.6.0 - Apache-2.0
+type-is 2.1.0 - MIT
+undici 6.29.1 - MIT
+undici-types 6.21.0 - MIT
+unpipe 1.0.0 - MIT
+util-deprecate 1.0.2 - MIT
+validate-npm-package-name 8.0.0 - ISC
+vary 1.1.2 - MIT
+vibe-kanban 0.1.44 - Apache-2.0 (third-party.txt: package.json declares no license)
+vscode-jsonrpc 8.2.0 - MIT
+vscode-languageserver-protocol 3.17.5 - MIT
+vscode-languageserver-types 3.17.5 - MIT
+walk-up-path 4.0.0 - ISC
+which 2.0.2 - ISC
+which 7.0.0 - ISC
+wrappy 1.0.2 - ISC
+write-file-atomic 8.0.0 - ISC
+yallist 4.0.0 - ISC
+yallist 5.0.0 - BlueOak-1.0.0
+zod 3.25.76 - MIT
+zod 4.6.7 - MIT
+zod-to-json-schema 3.25.1 - ISC
+zod-to-json-schema 3.25.2 - ISC
+
+# Python packages: every *.dist-info and *.egg-info in the image (package-manager caches aside), with the license its metadata declares
+agent-detector 2.0.0 - MIT
+aiofile 3.12.3 - Apache-2.0
+aiohappyeyeballs 2.7.1 - PSF-2.0
+aiohttp 3.14.5 - Apache-2.0 AND MIT
+aiosignal 1.4.0 - Apache 2.0
+alembic 1.20.1 - MIT
+altair 6.3.0 - BSD License (classifier)
+annotated-doc 0.0.7 - MIT
+annotated-types 0.8.0 - MIT
+anthropic 2.14.0 - Apache-2.0
+anyio 4.16.0 - MIT
+asgiref 3.13.0 - BSD-3-Clause
+asyncpg 0.32.0 - Apache-2.0
+attrs 26.1.0 - MIT
+Authlib 1.9.10 - BSD-3-Clause
+autocommand 2.2.2 - LGPLv3
+backports.tarfile 1.2.0 - MIT License (classifier)
+beartype 0.23.1 - MIT
+beautifulsoup4 4.15.0 - MIT License
+boto3 1.44.13 - Apache-2.0
+botocore 1.44.13 - Apache-2.0
+cachetools 8.0.3 - MIT
+caio 0.12.10 - Apache-2.0
+certifi 2026.11.20 - MPL-2.0
+cffi 2.1.1 - MIT-0
+charset-normalizer 3.5.3 - MIT
+claude-agent-sdk 0.2.189 - MIT
+click 8.5.1 - BSD-3-Clause
+cloudpickle 3.1.3 - BSD-3-Clause
+cobble 0.1.4 - BSD License (classifier)
+cohere 7.3.2 - MIT
+croniter 7.0.0 - MIT
+cryptography 50.0.2 - Apache-2.0 OR BSD-3-Clause
+cuda-bindings 13.5.0 - Apache-2.0
+cuda-pathfinder 1.9.1 - Apache-2.0
+cuda-toolkit 13.2.2 - UNKNOWN (no license metadata)
+cyclopts 5.5.3 - Apache-2.0
+dateparser 1.5.1 - BSD-3-Clause
+defusedxml 0.7.1 - PSFL
+detect-installer 0.2.1 - 0BSD
+distro 1.9.0 - Apache License, Version 2.0
+dnspython 2.9.2 - ISC
+docstring_parser 0.18.0 - MIT
+einops 0.8.2 - MIT
+email-validator 2.4.0 - Unlicense
+et_xmlfile 2.0.0 - MIT
+exceptiongroup 1.3.2 - MIT License (classifier)
+fastapi 0.165.0 - MIT
+fastapi-cli 0.0.34 - MIT
+fastapi-cloud-cli 0.28.1 - MIT
+fastar 0.12.0 - MIT
+fastavro 1.13.1 - MIT
+fastmcp 4.2.6 - Apache-2.0
+fastmcp-slim 4.2.6 - Apache-2.0
+fastuuid 0.14.0 - BSD License (classifier)
+filelock 4.3.2 - MIT
+FlashRank 0.2.10 - Apache 2.0
+flatbuffers 25.12.19 - Apache 2.0
+frozenlist 1.8.0 - Apache-2.0
+fsspec 2026.9.0 - BSD-3-Clause
+github-copilot-sdk 1.0.35 - MIT
+google-auth 2.63.1 - Apache 2.0
+google-genai 3.6.1 - Apache-2.0
+googleapis-common-protos 1.76.0 - Apache-2.0
+greenlet 3.3.2 - MIT AND PSF-2.0
+griffelib 2.4.1 - ISC
+h11 0.16.0 - MIT
+h2 4.4.1 - MIT
+hf-xet 1.8.0 - Apache-2.0
+hindsight-api 1.2.1 - MIT
+hindsight-api-slim 1.2.1 - MIT
+hpack 4.2.0 - MIT
+httpcore 1.0.9 - BSD-3-Clause
+httpcore2 2.16.2 - BSD-3-Clause
+httptools 0.9.0 - MIT
+httpx 0.29.0 - BSD-3-Clause
+httpx2 2.16.2 - BSD-3-Clause
+huggingface_hub 1.33.0 - Apache-2.0
+hyperframe 6.1.0 - The MIT License (MIT)
+idna 3.20 - BSD-3-Clause
+importlib_metadata 8.7.1 - Apache-2.0
+importlib_metadata 8.9.0 - Apache-2.0
+itsdangerous 2.2.0 - BSD License (classifier)
+jaraco.context 6.1.0 - MIT
+jaraco.functools 4.4.0 - MIT
+jaraco.text 4.0.0 - MIT License (classifier)
+Jinja2 3.1.6 - BSD License (classifier)
+jiter 0.19.0 - MIT
+jmespath 1.1.0 - MIT
+joblib 1.6.0 - BSD-3-Clause
+joserfc 1.8.0 - BSD-3-Clause
+json_repair 0.64.9 - MIT
+jsonref 1.1.0 - MIT
+jsonschema 4.26.0 - MIT
+jsonschema-path 0.5.0 - Apache-2.0
+jsonschema-specifications 2025.9.1 - MIT
+litellm 1.111.0 - MIT
+lxml 6.2.0 - BSD-3-Clause
+magika 1.0.3 - Apache-2.0
+Mako 1.4.3 - MIT
+mammoth 1.13.0 - BSD-2-Clause
+markdown-it-py 4.3.0 - MIT License (classifier)
+markdownify 1.2.4 - MIT License (classifier)
+markitdown 0.1.9 - MIT
+MarkupSafe 3.0.4 - BSD-3-Clause
+mcp 2.3.0 - MIT
+mcp-types 2.3.0 - MIT
+mdurl 0.1.2 - MIT License (classifier)
+more-itertools 10.8.0 - MIT
+mpmath 1.3.0 - BSD
+multidict 7.2.1 - Apache-2.0
+narwhals 2.29.0 - MIT
+networkx 3.7 - BSD-3-Clause
+numpy 2.5.5 - BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0
+nvidia-cublas 13.4.1.3 - LicenseRef-NVIDIA-Proprietary
+nvidia-cuda-cccl 13.3.5.0.6 - LicenseRef-NVIDIA-Proprietary
+nvidia-cuda-cupti 13.2.86 - LicenseRef-NVIDIA-Proprietary
+nvidia-cuda-nvrtc 13.2.86 - LicenseRef-NVIDIA-Proprietary
+nvidia-cuda-runtime 13.2.86 - LicenseRef-NVIDIA-Proprietary
+nvidia-cudnn-cu13 9.26.0.51 - LicenseRef-NVIDIA-Proprietary
+nvidia-cufft 12.2.0.57 - LicenseRef-NVIDIA-Proprietary
+nvidia-cufile 1.17.1.22 - LicenseRef-NVIDIA-Proprietary
+nvidia-cusolver 12.2.0.11 - LicenseRef-NVIDIA-Proprietary
+nvidia-cusparse 12.7.10.12 - LicenseRef-NVIDIA-Proprietary
+nvidia-cusparselt-cu13 0.8.1 - NVIDIA Proprietary Software
+nvidia-nccl-cu13 2.30.7 - LicenseRef-NVIDIA-Proprietary
+nvidia-nvjitlink 13.5.37 - LicenseRef-NVIDIA-Proprietary
+nvidia-nvshmem-cu13 3.7.2 - LicenseRef-NVIDIA-Proprietary
+nvidia-nvtx 13.2.86 - LicenseRef-NVIDIA-Proprietary
+obstore 0.12.1 - MIT License (classifier)
+onnxruntime 1.32.0 - MIT License
+openai 3.60.0 - Apache-2.0
+openapi-pydantic 0.6.0 - MIT
+openpyxl 3.1.5 - MIT
+opentelemetry-api 1.45.2 - Apache-2.0
+opentelemetry-exporter-http-transport 0.66b2 - Apache-2.0
+opentelemetry-exporter-otlp-common 0.66b2 - Apache-2.0
+opentelemetry-exporter-otlp-proto-common 1.45.2 - Apache-2.0
+opentelemetry-exporter-otlp-proto-http 1.45.2 - Apache-2.0
+opentelemetry-exporter-prometheus 0.66b2 - Apache-2.0
+opentelemetry-instrumentation 0.66b2 - Apache-2.0
+opentelemetry-instrumentation-asgi 0.66b2 - Apache-2.0
+opentelemetry-instrumentation-fastapi 0.66b2 - Apache-2.0
+opentelemetry-proto 1.45.2 - Apache-2.0
+opentelemetry-sdk 1.45.2 - Apache-2.0
+opentelemetry-semantic-conventions 0.66b2 - Apache-2.0
+opentelemetry-util-http 0.66b2 - Apache-2.0
+orjson 3.13.0 - MPL-2.0 AND (Apache-2.0 OR MIT)
+packaging 26.3 - Apache-2.0 OR BSD-2-Clause
+packaging 26.4 - Apache-2.0 OR BSD-2-Clause
+pandas 3.1.1 - BSD-3-Clause
+pathable 0.6.0 - Apache-2.0
+pdfminer.six 20260107 - MIT
+pdfplumber 0.11.11 - MIT License (classifier)
+pg0-embedded 0.18.1 - MIT
+pgvector 0.5.1 - MIT
+pillow 13.0.0 - MIT-CMU
+pip 22.0.2 - MIT
+platformdirs 4.14.9 - MIT
+platformdirs 4.4.0 - MIT
+prometheus_client 0.26.0 - Apache-2.0 AND BSD-2-Clause
+prompt_toolkit 3.0.51 - BSD License (classifier)
+propcache 0.5.4 - Apache-2.0
+protobuf 7.36.2 - 3-Clause BSD License
+psycopg2-binary 2.9.13 - LGPL with exceptions
+py-key-value-aio 0.5.0 - Apache-2.0
+pyarrow 26.0.1 - Apache-2.0
+pyasn1 0.6.5 - BSD-2-Clause
+pyasn1_modules 0.4.2 - BSD
+pycparser 3.12 - BSD-3-Clause
+pydantic 2.14.4 - MIT
+pydantic-extra-types 2.11.1 - MIT
+pydantic-settings 2.16.3 - MIT
+pydantic_core 2.50.5 - MIT
+pydeck 0.9.3 - Apache License 2.0
+Pygments 2.21.0 - BSD-2-Clause
+PyJWT 2.15.1 - MIT
+pypdfium2 5.15.2 - BSD-3-Clause, Apache-2.0, dependency licenses
+pyperclip 1.11.0 - BSD
+python-dateutil 2.9.0.post0 - Dual License
+python-dateutil 4.0.0 - BSD-3-Clause
+python-dotenv 1.2.4 - BSD-3-Clause
+python-multipart 0.0.34 - Apache-2.0
+python-pptx 1.0.2 - MIT
+pytz 2026.6 - MIT
+PyYAML 5.4.1 - MIT
+PyYAML 6.0.4 - MIT
+referencing 0.37.0 - MIT
+regex 2026.11.25 - Apache-2.0 AND CNRI-Python
+requests 2.34.2 - Apache-2.0
+rich 15.0.0 - MIT
+rich-rst 2.2.0 - MIT
+rich-toolkit 0.20.6 - MIT
+rignore 0.8.1 - MIT
+rpds-py 2026.9.1 - MIT
+s3transfer 0.19.3 - Apache License 2.0
+safetensors 0.8.0 - Apache Software License (classifier)
+scikit-learn 1.9.1 - BSD-3-Clause
+scipy 1.18.1 - BSD License (classifier)
+sentence-transformers 6.3.0 - Apache-2.0
+sentry-sdk 3.0.1 - MIT
+setuptools 59.6.0 - MIT License (classifier)
+setuptools 84.2.1 - MIT
+shellingham 1.5.4 - ISC License
+six 1.17.0 - MIT
+sniffio 1.3.1 - MIT OR Apache-2.0
+soupsieve 4.1.3 - MIT
+SQLAlchemy 2.0.58 - MIT
+sse-starlette 3.7.1 - BSD-3-Clause
+starlette 1.10.0 - BSD-3-Clause
+streamlit 1.67.0 - Apache-2.0
+sympy 1.14.0 - BSD
+tenacity 9.1.4 - Apache 2.0
+threadpoolctl 3.8.0 - BSD-3-Clause
+tiktoken 0.14.0 - MIT License
+tokenizers 0.22.2 - Apache Software License (classifier)
+toktok-rs 0.5.0 - MIT
+tomli 2.4.0 - MIT
+torch 2.15.0 - Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND ISC AND MIT AND Zlib
+tqdm 4.70.1 - MPL-2.0 AND MIT
+transformers 5.15.1 - Apache 2.0 License
+triton 3.9.0 - MIT
+truststore 0.10.5 - MIT
+typer 0.29.3 - MIT
+types-requests 2.33.0.20261030 - Apache-2.0
+typing-inspection 0.4.5 - MIT
+typing_extensions 4.16.0 - PSF-2.0
+tzdata 2026.6 - Apache-2.0
+tzlocal 5.4.5 - MIT
+uncalled-for 0.6.2 - MIT
+urllib3 2.8.0 - MIT
+uvicorn 0.54.0 - BSD-3-Clause
+uvloop 0.23.0 - MIT License
+watchdog 7.1.1 - Apache-2.0
+watchfiles 1.3.0 - MIT
+websockets 17.4 - BSD-3-Clause
+wheel 0.37.1 - MIT
+wheel 0.46.3 - MIT
+wrapt 2.5.2 - BSD-2-Clause
+wsproto 1.3.2 - MIT
+xlrd 2.0.2 - BSD
+xlsxwriter 3.3.4 - BSD-2-Clause
+yarl 1.25.1 - Apache-2.0
+zipp 3.23.0 - MIT
+zipp 4.1.2 - MIT
+
+# tools installed from release archives, installers, git clones, container-image exports and vendored trees (/setup/third-party.txt)
+aws-cli 2.42.5 - Apache-2.0
+BAAI/bge-small-en-v1.5 5c38ec7c405e - MIT
+buildctl v0.35.0 - Apache-2.0
+bun 1.4.4 - MIT
+claude-md-management@claude-plugins-official 1.0.0 - Apache-2.0
+claude-mem@thedotmack 13.39.0 - Apache-2.0
+code-review@claude-plugins-official 1.0.1 - Apache-2.0
+communication-engine 1156a40 - Apache-2.0
+context7@claude-plugins-official 0fbfda5a91f4 - Apache-2.0
+cpython-standalone 3.14.10 - PSF-2.0
+crane 0.22.1 - Apache-2.0
+github@claude-plugins-official 0fbfda5a91f4 - Apache-2.0
+gpu-cluster-basics 0.1.0 - MIT (bundled in this repository at Container-Root/opt/loglearner-packs, its LICENSE with its copyright notice kept there)
+headlamp v0.46.0 - Apache-2.0
+hindsight-ai/hs-rerank-1 6bc7caf42bfc - MIT
+hindsight-coding-agents 0.9.0 - MIT
+hindsight-control-plane 1.2.1 - MIT
+issues-tracker 0.1.9 - Apache-2.0 (bundled in this repository at Container-Root/opt/issues-tracker, its LICENSE kept there)
+kubectl v1.36.6 - Apache-2.0
+kubectx 12ad6fb - Apache-2.0
+loglearner 3ab496f - MIT (bundled in this repository at Container-Root/opt/loglearner, its LICENSE with its copyright notice kept there)
+loop-deck 1.7.1+4c878e1 - MIT (bundled in this repository at Container-Root/opt/loop-deck, its LICENSE with its copyright notice kept there)
+marketplace-claude-plugins-official 0fbfda5 - Apache-2.0
+marketplace-omc 0564555 - MIT
+marketplace-thedotmack 13.39.0 - Apache-2.0
+nodejs v24.22.3 - MIT
+nvm v0.41.0 - MIT
+oh-my-claudecode@omc 5.7.31 - MIT
+postgresql_binaries 18.7.0 - PostgreSQL
+ralph-loop@claude-plugins-official 1.0.1 - Apache-2.0
+superpowers@claude-plugins-official 7.0.2 - MIT
+swagger-ui-dist 5.35.0 - Apache-2.0
+tmux-agent 0.1.1+92113b5 - Apache-2.0 (bundled in this repository at Container-Root/opt/tmux-agent, its LICENSE and NOTICE with their copyright notices kept there)
+uv 0.13.9 - Apache-2.0 OR MIT
+uv-for-hindsight 0.13.9 - Apache-2.0 OR MIT
+vibe-kanban-binary v0.1.44-20260424091429 - Apache-2.0

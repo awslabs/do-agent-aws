@@ -1,0 +1,11 @@
+{
+ "about": "the loop runs fire 2 now; fire 1 ended ok",
+ "running": true,
+ "log": [[-900, "LOOP START interval=300s goals={goals} fire_timeout=600s workdir={work}"],
+         [-800, "FIRE 1 BEGIN goals={goals}"], [-760, "FIRE 1 END rc=0 duration=40s"],
+         [-30, "FIRE 2 BEGIN goals={goals}"]],
+ "state": [-30, "FIRING fire=2"],
+ "stop_flag": false,
+ "goals": "- [x] write the report\n- [ ] summarise the notes\n",
+ "fires": {"1": "wrote the report\n"}
+}

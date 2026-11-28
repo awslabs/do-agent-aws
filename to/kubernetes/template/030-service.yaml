@@ -1,0 +1,21 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+kind: Service
+apiVersion: v1
+metadata:
+  name: ${APP_NAME}
+  namespace: ${NAMESPACE}
+  labels:
+    app: ${APP_NAME}
+spec:
+  # ONE exposed port: the harness home page + reverse proxy. Every enabled UI is reached
+  # through it (docs/manual/ui.md "Home page and reverse proxy"). The service stays ClusterIP;
+  # reach the harness with kubectl -n ${NAMESPACE} port-forward svc/${APP_NAME} 8000:8000
+  # then open http://localhost:8000
+  ports:
+  - name: home
+    port: ${PORT_EXTERNAL_HOME}
+    targetPort: home
+  type: ClusterIP
+  selector:
+    app: ${APP_NAME}

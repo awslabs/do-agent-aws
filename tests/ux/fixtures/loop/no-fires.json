@@ -1,0 +1,10 @@
+{
+ "about": "the loop runs and idles: no goals file yet, so no fire has run",
+ "running": true,
+ "log": [[-120, "LOOP START interval=300s goals={goals} fire_timeout=600s workdir={work}"],
+         [-120, "LOOP IDLE goals file {goals} not found"]],
+ "state": [-120, "IDLE reason=no-goals-file"],
+ "stop_flag": false,
+ "goals": null,
+ "fires": {}
+}

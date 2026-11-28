@@ -1,0 +1,17 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+# compose-demo: a two-service stack the harness builds, runs and tests inside a
+# Docker Sandbox, against the sandbox's own Docker Engine. No service publishes
+# a port and none declares a healthcheck: the stack is reached over its own
+# network, and the tests run as a container's main process (see README.md).
+services:
+  web:
+    build: .
+    command: ["perl", "/app/server.pl"]
+  tests:
+    build: .
+    command: ["perl", "/app/check.pl", "http://web:8080"]
+    depends_on:
+      - web
+    # Not started by "docker compose up"; "docker compose run tests" runs it.
+    profiles: ["test"]

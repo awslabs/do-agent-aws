@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en" class="hs-root">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Files - do-agent-aws harness</title>
+<link rel="stylesheet" href="/__harness/harness.css">
+<link rel="stylesheet" href="/files.css">
+</head>
+<body class="hs-page">
+<header class="hs-header">
+<h1>Files</h1>
+<p id="subtitle">the shared folder: download what the agent produced for you, upload files for it to read</p>
+<span id="state" class="hs-dot" data-state="checking">checking</span>
+</header>
+<main>
+<p id="notice" class="hs-error" hidden></p>
+<nav id="crumbs" class="crumbs" aria-label="Folder"></nav>
+<div class="toolbar">
+<button id="refresh" type="button">Refresh</button>
+<button id="newfolder" type="button">New folder</button>
+<button id="pick" type="button">Upload files</button>
+<input id="picker" type="file" multiple hidden>
+<span id="count" class="hs-muted"></span>
+</div>
+<section id="mover" class="mover hs-card" hidden aria-label="Move to a folder">
+<p id="mover-what"></p>
+<p class="mover-where">destination: <code id="mover-path">/</code></p>
+<select id="mover-list" size="6" aria-label="Folders inside the destination"></select>
+<div class="toolbar">
+<button id="mover-up" type="button">Up</button>
+<button id="mover-open" type="button">Open</button>
+<button id="mover-go" type="button">Move here</button>
+<button id="mover-cancel" type="button">Cancel</button>
+</div>
+</section>
+<section id="drop" class="drop" aria-label="Upload by drag and drop">
+<p>Drop files here to upload them into this folder, or use <strong>Upload files</strong>. Several files go one after another; a name already in the folder asks before it is replaced. To move an entry, drag its row onto a folder row, the parent row or a breadcrumb, or use its <strong>Move to...</strong>.</p>
+</section>
+<ul id="queue" class="queue" aria-live="polite"></ul>
+<table id="list" class="hs-table">
+<caption id="caption">this folder</caption>
+<thead><tr><th>Name</th><th>Size</th><th>Modified</th><th>Actions</th></tr></thead>
+<tbody></tbody>
+</table>
+<p id="legend" class="hs-muted">the folder is <code id="root">/wd/files</code> on the agent's volume - the agent writes its deliverables there and reads what you upload; files up to <span id="cap">-</span> each (FILES_MAX_UPLOAD_MB); Rename, Move to... and Delete ask before they change anything, and a folder that is not empty asks twice; nothing is executed and every download is saved, never shown</p>
+</main>
+<script src="/files.js"></script>
+</body>
+</html>

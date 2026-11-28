@@ -1,0 +1,19 @@
+diff --git a/packages/remote-web/src/app/layout/RemoteAppShell.tsx b/packages/remote-web/src/app/layout/RemoteAppShell.tsx
+index 43be6a6..b8ad4b9 100644
+--- a/packages/remote-web/src/app/layout/RemoteAppShell.tsx
++++ b/packages/remote-web/src/app/layout/RemoteAppShell.tsx
+@@ -261,11 +261,9 @@ export function RemoteAppShell({ children }: RemoteAppShellProps) {
+           <AppBar
+             projects={projects}
+             hosts={relayHosts}
+-            onPairHostClick={
+-              isSignedIn && !DO_AGENT_AWS_HARNESS_MODE
+-                ? handlePairHostClick
+-                : undefined
+-            }
++            // do-agent-aws Goals board, relay on (kanban/patches-relay/0101): the harness runs the relay, so Pair a
++            // remote device is shown again; the community links stay hidden
++            onPairHostClick={isSignedIn ? handlePairHostClick : undefined}
+             showCommunityLinks={!DO_AGENT_AWS_HARNESS_MODE}
+             activeHostId={activeHostId}
+             onCreateProject={handleCreateProject}

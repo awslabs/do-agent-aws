@@ -1,0 +1,59 @@
+/* Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. */
+/* SPDX-License-Identifier: Apache-2.0 */
+/* The Files page - the harness look (docs/UI-STYLE.md): the tokens and components of /__harness/harness.css, linked first
+   by index.html and served on this host too. Only this page's own layout is here, every colour one of the tokens; the state
+   pill, the error callout, the table (cards under 700 px) and the empty state are the stylesheet's components. No external
+   asset. A status token colours a shape or a rule only (the drop zone's border while a drag is over it, a job's rule);
+   every word stays in the text tokens. */
+header.hs-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--hs-space-2) var(--hs-space-3); }
+header.hs-header p { margin: 0; flex: 1 1 24em; }
+main { padding: var(--hs-space-3) var(--hs-space-4) var(--hs-space-4); max-width: var(--hs-max, 1700px); margin: 0 auto; box-sizing: border-box; }
+#notice { margin: 0 0 var(--hs-space-3); }
+/* where you are: the folder's path as links, root first */
+.crumbs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; margin: 0 0 var(--hs-space-2); font: 14px/1.5 var(--hs-mono); overflow-wrap: anywhere; }
+.crumbs .sep { color: var(--hs-muted); }
+.crumbs .crumb:last-child { color: var(--hs-fg); font-weight: 600; text-decoration: none; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--hs-space-2); margin: 0 0 var(--hs-space-2); }
+/* the drop zone: a dashed surface; its border takes the accent while a drag is over it (a shape, not text) */
+.drop { border: 2px dashed var(--hs-border); border-radius: var(--hs-radius); background: var(--hs-surface); padding: var(--hs-space-2) var(--hs-space-3); margin: 0 0 var(--hs-space-3); color: var(--hs-muted); font-size: 14px; }
+.drop p { margin: 0; }
+.drop.over { border-color: var(--hs-accent); color: var(--hs-fg); }
+/* the upload queue: one line per file - its name, size, a progress bar and a word for its state; a finished job's rule
+   carries the status step (ok done, bad failed), the word stays in the text token */
+.queue { list-style: none; margin: 0 0 var(--hs-space-3); padding: 0; }
+.queue:empty { display: none; }
+.job { display: grid; grid-template-columns: minmax(8em, 2fr) auto minmax(6em, 1fr) minmax(6em, 2fr); gap: 0 10px; align-items: center; padding: 6px 10px; border-left: 4px solid var(--hs-border); background: var(--hs-surface); margin: 0 0 4px; font-size: 13px; }
+.job progress { width: 100%; height: 8px; }
+.job-name { overflow-wrap: anywhere; font-weight: 600; }
+.job-state { overflow-wrap: anywhere; }
+.job.done { border-left-color: var(--hs-ok); }
+.job.failed { border-left-color: var(--hs-bad); }
+.job.skipped { border-left-color: var(--hs-stale); }
+/* the "Move to..." picker: a card with the destination's path, its folders as a list and four buttons */
+.mover { margin: 0 0 var(--hs-space-3); padding: var(--hs-space-2) var(--hs-space-3); }
+.mover p { margin: 0 0 var(--hs-space-2); }
+.mover-where { font: 14px/1.5 var(--hs-mono); }
+.mover select { display: block; width: 100%; max-width: 40em; margin: 0 0 var(--hs-space-2); font: inherit; color: var(--hs-fg); background: var(--hs-surface); border: 1px solid var(--hs-border); border-radius: var(--hs-radius); }
+.mover .toolbar { margin: 0; }
+/* the listing: a folder opens in place, a file downloads; a symlink carries a word beside its name; each row carries its
+   actions (Download, Rename, Move to..., Delete - the last one's rule takes the bad token, the word stays in the text
+   token) and can be dragged onto a folder row, the parent row or a breadcrumb, which outline themselves while it is over */
+.hs-table .name { overflow-wrap: anywhere; }
+.hs-table .folder { font-weight: 600; }
+.hs-table tr.outside .name { color: var(--hs-muted); }
+.chip { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 600; line-height: 1.2; padding: 1px 6px; border-radius: 10px; color: var(--hs-fg); background: color-mix(in srgb, var(--hs-muted) 12%, var(--hs-surface)); white-space: nowrap; }
+.hs-table td.hs-empty { border: 0; }
+.actions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.actions .act { font: inherit; font-size: 13px; padding: 2px 8px; color: var(--hs-fg); background: var(--hs-surface); border: 1px solid var(--hs-border); border-radius: var(--hs-radius); cursor: pointer; }
+.actions .act.danger { border-color: var(--hs-bad); }
+.hs-table tr[draggable="true"] { cursor: grab; }
+.hs-table tr.dragging { opacity: 0.5; }
+.hs-table tr.target, .crumbs .crumb.target { outline: 2px solid var(--hs-accent); outline-offset: -2px; }
+#legend { margin: var(--hs-space-3) 0 0; font-size: 13px; }
+@media (max-width: 700px) {
+  main { padding-left: 16px; padding-right: 16px; }
+  header.hs-header p { flex-basis: 100%; }
+  .job { grid-template-columns: 1fr auto; }
+  .job progress { grid-column: 1 / -1; }
+  .job-state { grid-column: 1 / -1; }
+}

@@ -1,0 +1,530 @@
+diff --git a/crates/remote/src/auth/jwt.rs b/crates/remote/src/auth/jwt.rs
+index 9f1f6f3..33148b1 100644
+--- a/crates/remote/src/auth/jwt.rs
++++ b/crates/remote/src/auth/jwt.rs
+@@ -19,7 +19,9 @@ use uuid::Uuid;
+ 
+ use crate::{auth::provider::ProviderTokenDetails, db::auth::AuthSession};
+ 
+-pub(super) const ACCESS_TOKEN_TTL_SECONDS: i64 = 120;
++// 15 minutes: with 120 s a token could expire while a request waited for a connection behind the shapes'
++// long-polls ("ExpiredSignature"), and every page refreshed it every two minutes
++pub(super) const ACCESS_TOKEN_TTL_SECONDS: i64 = 900;
+ pub(super) const REFRESH_TOKEN_TTL_DAYS: i64 = 365;
+ const DEFAULT_JWT_LEEWAY_SECONDS: u64 = 60;
+ 
+@@ -124,7 +126,7 @@ impl JwtService {
+     ) -> Result<Tokens, JwtError> {
+         let now = Utc::now();
+ 
+-        // Access token, short-lived (~2 minutes)
++        // Access token, short-lived (15 minutes)
+         let access_exp = now + ChronoDuration::seconds(ACCESS_TOKEN_TTL_SECONDS);
+         let access_claims = AccessTokenClaims {
+             sub: user_id,
+diff --git a/packages/ui/src/components/IssueCommentsSection.tsx b/packages/ui/src/components/IssueCommentsSection.tsx
+index 992fe89..8a144d7 100644
+--- a/packages/ui/src/components/IssueCommentsSection.tsx
++++ b/packages/ui/src/components/IssueCommentsSection.tsx
+@@ -101,6 +101,9 @@ interface IssueCommentsSectionProps {
+   dropzoneProps?: DropzoneProps;
+   onBrowseAttachment?: () => void;
+   isUploading?: boolean;
++  isSavingComment?: boolean;
++  commentSaveError?: string | null;
++  onDismissCommentSaveError?: () => void;
+   attachmentError?: string | null;
+   onDismissAttachmentError?: () => void;
+   renderEditor: (props: IssueCommentsEditorProps) => ReactNode;
+@@ -128,6 +131,9 @@ export function IssueCommentsSection({
+   dropzoneProps,
+   onBrowseAttachment,
+   isUploading,
++  isSavingComment,
++  commentSaveError,
++  onDismissCommentSaveError,
+   attachmentError,
+   onDismissAttachmentError,
+   renderEditor,
+@@ -196,7 +202,25 @@ export function IssueCommentsSection({
+               />
+             </div>
+           )}
++          {commentSaveError && (
++            <div className="mb-half" data-testid="comment-save-error">
++              <ErrorAlert
++                message={commentSaveError}
++                onDismiss={onDismissCommentSaveError}
++                dismissLabel={t('buttons.close')}
++              />
++            </div>
++          )}
+           <div className="flex items-center justify-end gap-half">
++            {isSavingComment && (
++              <span
++                className="text-sm text-low"
++                role="status"
++                data-testid="comment-saving"
++              >
++                {t('kanban.savingComment')}
++              </span>
++            )}
+             {onBrowseAttachment && (
+               <TooltipProvider>
+                 <Tooltip>
+@@ -222,7 +246,9 @@ export function IssueCommentsSection({
+             <button
+               type="button"
+               onClick={onSubmitComment}
+-              disabled={!commentInput.trim() || isUploading}
++              disabled={
++                !commentInput.trim() || isUploading || isSavingComment
++              }
+               className={cn(
+                 'size-[22px] rounded-full bg-panel border border-border',
+                 'flex items-center justify-center',
+diff --git a/packages/web-core/src/i18n/locales/en/common.json b/packages/web-core/src/i18n/locales/en/common.json
+index 2dda71b..17f9fb7 100644
+--- a/packages/web-core/src/i18n/locales/en/common.json
++++ b/packages/web-core/src/i18n/locales/en/common.json
+@@ -374,6 +374,8 @@
+     "createdBy": "Created by",
+     "comments": "Comments",
+     "enterCommentPlaceholder": "Enter your comment here...",
++    "savingComment": "Saving...",
++    "commentSaveFailed": "Your comment was not saved ({{reason}}). It is still in the box: send it again.",
+     "attachFile": "Attach file",
+     "attachFileHint": "Attach files (max 20MB each)",
+     "dropFilesHere": "Drop files here",
+diff --git a/packages/web-core/src/pages/kanban/IssueCommentsSectionContainer.tsx b/packages/web-core/src/pages/kanban/IssueCommentsSectionContainer.tsx
+index 09a8927..d98b359 100644
+--- a/packages/web-core/src/pages/kanban/IssueCommentsSectionContainer.tsx
++++ b/packages/web-core/src/pages/kanban/IssueCommentsSectionContainer.tsx
+@@ -20,6 +20,7 @@ import {
+   commitCommentAttachments,
+   deleteAttachment,
+ } from '@/shared/lib/remoteApi';
++import { serverWriteOf } from '@/shared/lib/electric/collections';
+ import {
+   extractAttachmentIds,
+   removeAttachmentMarkdownBySource,
+@@ -74,6 +75,14 @@ function IssueCommentsSectionContent() {
+ 
+   // UI state for comment input
+   const [commentInput, setCommentInput] = useState('');
++  const commentInputRef = useRef(commentInput);
++  commentInputRef.current = commentInput;
++  // do-agent-aws Goals board (kanban/patches/0008): a comment on its way to the board server shows "Saving...",
++  // and its text stays in the box until the server has it
++  const [isSavingComment, setIsSavingComment] = useState(false);
++  const [commentSaveError, setCommentSaveError] = useState<string | null>(
++    null
++  );
+   const commentDraftId = `issue-comment:${issueContext.issueId}`;
+   const {
+     scratch: commentDraftScratch,
+@@ -317,19 +326,42 @@ function IssueCommentsSectionContent() {
+   }, [commentsData, issueContext, currentUserId, membersWithProfilesById, t]);
+ 
+   const handleSubmitComment = useCallback(async () => {
+-    if (!commentInput.trim()) return;
++    if (isSavingComment || !commentInput.trim()) return;
+     const message = commentInput.trim();
+-    const { persisted } = issueContext.insertComment({
++    setCommentSaveError(null);
++    setIsSavingComment(true);
++    const { data: comment, persisted } = issueContext.insertComment({
+       issue_id: issueContext.issueId,
+       message,
+       parent_id: null,
+     });
+-    cancelDebouncedPersistCommentDraft();
+-    setCommentInput('');
+     try {
+-      await deleteCommentDraft();
++      // saved once the board server has it (its echo through the comments shape can wait for a long-poll); a row
++      // that never reaches a server (no collection) is done when it is persisted
++      await Promise.race([
++        serverWriteOf(comment.id),
++        persisted.then(() => undefined),
++      ]);
+     } catch (e) {
+-      console.error('[IssueCommentsSection] Failed to clear draft:', e);
++      // not saved: the text is still in the box, to send again
++      setIsSavingComment(false);
++      setCommentSaveError(
++        t('kanban.commentSaveFailed', {
++          reason: e instanceof Error ? e.message : String(e),
++        })
++      );
++      return;
++    }
++    setIsSavingComment(false);
++    // saved: the box empties, unless it was edited meanwhile (then it holds the next comment)
++    if (commentInputRef.current.trim() === message) {
++      cancelDebouncedPersistCommentDraft();
++      setCommentInput('');
++      try {
++        await deleteCommentDraft();
++      } catch (e) {
++        console.error('[IssueCommentsSection] Failed to clear draft:', e);
++      }
+     }
+ 
+     const allUploadedIds = getAttachmentIds();
+@@ -340,8 +372,7 @@ function IssueCommentsSectionContent() {
+ 
+       if (idsToCommit.length > 0) {
+         try {
+-          const confirmedComment = await persisted;
+-          await commitCommentAttachments(confirmedComment.id, {
++          await commitCommentAttachments(comment.id, {
+             attachment_ids: idsToCommit,
+           });
+         } catch (err) {
+@@ -357,11 +388,13 @@ function IssueCommentsSectionContent() {
+     clearAttachments();
+   }, [
+     commentInput,
++    isSavingComment,
+     issueContext,
+     getAttachmentIds,
+     clearAttachments,
+     cancelDebouncedPersistCommentDraft,
+     deleteCommentDraft,
++    t,
+   ]);
+ 
+   const handleStartEdit = useCallback(
+@@ -486,6 +519,9 @@ function IssueCommentsSectionContent() {
+       dropzoneProps={{ getRootProps, getInputProps, isDragActive }}
+       onBrowseAttachment={open}
+       isUploading={isUploading}
++      isSavingComment={isSavingComment}
++      commentSaveError={commentSaveError}
++      onDismissCommentSaveError={() => setCommentSaveError(null)}
+       attachmentError={uploadError}
+       onDismissAttachmentError={clearUploadError}
+       renderEditor={renderEditor}
+diff --git a/packages/web-core/src/shared/lib/electric/collections.ts b/packages/web-core/src/shared/lib/electric/collections.ts
+index 519d95e..d46b09e 100644
+--- a/packages/web-core/src/shared/lib/electric/collections.ts
++++ b/packages/web-core/src/shared/lib/electric/collections.ts
+@@ -3,6 +3,10 @@ import { createCollection } from '@tanstack/react-db';
+ 
+ import { getAuthRuntime } from '@/shared/lib/auth/runtime';
+ import { getRemoteApiUrl, makeRequest } from '@/shared/lib/remoteApi';
++import {
++  fetchOnSyncOrigin,
++  toSyncOriginUrl,
++} from '@/shared/lib/electric/syncOrigin';
+ import type { MutationDefinition, ShapeDefinition } from 'shared/remote-types';
+ import type { CollectionConfig, SyncError } from '@/shared/lib/electric/types';
+ 
+@@ -310,6 +314,15 @@ function createErrorHandlingFetch(args: {
+     }
+ 
+     try {
++      // do-agent-aws Goals board (kanban/patches/0008): a long-poll goes to the sync origin when the page names one
++      // (syncOrigin.ts), and to the board's own origin when that origin fails
++      const syncUrl = toSyncOriginUrl(input);
++      if (syncUrl) {
++        const response = await fetchOnSyncOrigin(syncUrl, init);
++        if (response) {
++          return response;
++        }
++      }
+       return await fetch(input, init);
+     } catch (error) {
+       if (isTransientElectricFailure(error)) {
+@@ -619,32 +632,111 @@ function maybeRefreshFallbackAfterMutation(sourceKey: string): void {
+   refreshFallbackSource(sourceKey);
+ }
+ 
++// do-agent-aws Goals board (kanban/patches/0008): each inserted row's POST as the board server answered it. A comment
++// box waits for this, not for the row to come back through its shape: that can wait for a long-poll to end.
++type ServerWrite = {
++  promise: Promise<void>;
++  resolve: () => void;
++  reject: (error: unknown) => void;
++  waited?: boolean;
++};
++const serverWrites = new Map<string, ServerWrite>();
++
++function serverWrite(id: string): ServerWrite {
++  let write = serverWrites.get(id);
++  if (!write) {
++    let resolve: () => void = () => undefined;
++    let reject: (error: unknown) => void = () => undefined;
++    const promise = new Promise<void>((res, rej) => {
++      resolve = res;
++      reject = rej;
++    });
++    // a write nobody waits for must not be an unhandled rejection
++    promise.catch(() => undefined);
++    write = { promise, resolve, reject };
++    serverWrites.set(id, write);
++  }
++  return write;
++}
++
++function settleServerWrite(id: string, error?: unknown): void {
++  const write = serverWrite(id);
++  if (error === undefined) {
++    write.resolve();
++  } else {
++    write.reject(error);
++  }
++  // nobody asked for it within a minute: drop it
++  if (!write.waited) {
++    setTimeout(() => {
++      if (!write.waited) serverWrites.delete(id);
++    }, 60_000);
++  }
++}
++
++/** Resolves when the board server has accepted the insert of row <id>; rejects with its error. */
++export function serverWriteOf(id: string): Promise<void> {
++  const write = serverWrite(id);
++  write.waited = true;
++  return write.promise.finally(() => serverWrites.delete(id));
++}
++
++// do-agent-aws Goals board (kanban/patches/0008): the writes in flight. While there is one, leaving the page asks
++// first: a write the page has not finished sending is lost with it (a comment's POST waited 20 s behind the shapes'
++// long-polls)
++let pendingWrites = 0;
++
++function onBeforeUnloadWhileWriting(event: BeforeUnloadEvent): void {
++  event.preventDefault();
++  event.returnValue = '';
++}
++
++async function trackWrite<T>(write: () => Promise<T>): Promise<T> {
++  if (pendingWrites++ === 0) {
++    window.addEventListener('beforeunload', onBeforeUnloadWhileWriting);
++  }
++  try {
++    return await write();
++  } finally {
++    if (--pendingWrites === 0) {
++      window.removeEventListener('beforeunload', onBeforeUnloadWhileWriting);
++    }
++  }
++}
++
+ function buildMutationHandlers(
+   mutation: MutationDefinition<unknown, unknown, unknown>,
+   sourceKey: string
+ ) {
+-  return {
++  const handlers = {
+     onInsert: async ({
+       transaction,
+     }: MutationFnParams): Promise<{ txid: number[] } | void> => {
+       const txids = await Promise.all(
+         transaction.mutations.map(async (mutationItem) => {
+           const data = mutationItem.modified as Record<string, unknown>;
+-          const response = await makeRequest(mutation.url, {
+-            method: 'POST',
+-            body: JSON.stringify(data),
+-          });
++          const id = String(mutationItem.key);
++          try {
++            const response = await makeRequest(mutation.url, {
++              method: 'POST',
++              body: JSON.stringify(data),
++            });
++
++            if (!response.ok) {
++              const message = await parseResponseError(
++                response,
++                `Failed to create ${mutation.name}`
++              );
++              throw new Error(message);
++            }
+ 
+-          if (!response.ok) {
+-            const message = await parseResponseError(
+-              response,
+-              `Failed to create ${mutation.name}`
+-            );
+-            throw new Error(message);
++            const result = (await response.json()) as { txid: number };
++            settleServerWrite(id);
++            return result.txid;
++          } catch (error) {
++            settleServerWrite(id, error);
++            throw error;
+           }
+-
+-          const result = (await response.json()) as { txid: number };
+-          return result.txid;
+         })
+       );
+ 
+@@ -758,6 +850,15 @@ function buildMutationHandlers(
+       return { txid: txids };
+     },
+   };
++
++  return {
++    onInsert: (params: MutationFnParams) =>
++      trackWrite(() => handlers.onInsert(params)),
++    onUpdate: (params: MutationFnParams) =>
++      trackWrite(() => handlers.onUpdate(params)),
++    onDelete: (params: MutationFnParams) =>
++      trackWrite(() => handlers.onDelete(params)),
++  };
+ }
+ 
+ export function createShapeCollection<TRow extends ElectricRow>(
+diff --git a/packages/web-core/src/shared/lib/electric/syncOrigin.ts b/packages/web-core/src/shared/lib/electric/syncOrigin.ts
+new file mode 100644
+index 0000000..095b0c3
+--- /dev/null
++++ b/packages/web-core/src/shared/lib/electric/syncOrigin.ts
+@@ -0,0 +1,143 @@
++/**
++ * do-agent-aws Goals board (kanban/patches/0008): the origin the board's Electric long-polls go to.
++ *
++ * Every live shape holds a long-poll open, and on HTTP/1.1 a browser opens at most six connections to one host: with
++ * six live shapes, every other request of the page (its reads, its writes, a token refresh) waited for one of them to
++ * end, up to 20 s and more. A host that serves the shapes from a second origin names it in
++ * <meta name="harness-sync-origin" content="//host[:port]">; the live requests (live=true, the long-polls) then go
++ * there, so they fill that host's connections and never the board's own. A shape's first and catch-up requests answer
++ * at once and stay on the board's origin, so a shape that opens later (a card's comments) loads at once too.
++ *
++ * Without the meta, or with a value that is not an origin alone, nothing changes. A network error on the sync origin
++ * is retried there twice, after 0.5 s and 1 s (a network change aborts every request in flight); a third failure is
++ * the shape's own: it switches to its fallback, short reads on the board's origin every 30 s, so a long-poll never
++ * holds one of the board's own connections. An answer without the Electric headers means a sync origin that does
++ * not serve them: the page leaves it for good, and the long-polls go to the board's origin.
++ */
++
++const META_NAME = 'harness-sync-origin';
++const SHAPE_PATH_PREFIX = '/v1/shape/';
++// an origin alone: //host[:port] or http(s)://host[:port], no path, query, fragment or credentials
++const ORIGIN_ONLY = /^(?:https?:)?\/\/[^/?#@\s]+\/?$/i;
++
++// a network error on the sync origin is retried after these delays, then it is the shape's own
++const RETRY_DELAYS_MS = [500, 1000];
++
++let syncOrigin: string | null | undefined;
++
++function readSyncOrigin(): string | null {
++  if (typeof document === 'undefined' || typeof window === 'undefined') {
++    return null;
++  }
++  const value = document
++    .querySelector(`meta[name="${META_NAME}"]`)
++    ?.getAttribute('content')
++    ?.trim();
++  if (!value) return null;
++  if (!ORIGIN_ONLY.test(value)) {
++    console.warn(
++      `[sync-origin] ignored ${META_NAME} "${value}": not an origin`
++    );
++    return null;
++  }
++  try {
++    const origin = new URL(value, window.location.href).origin;
++    return origin === window.location.origin ? null : origin;
++  } catch {
++    return null;
++  }
++}
++
++function getSyncOrigin(): string | null {
++  if (syncOrigin === undefined) {
++    syncOrigin = readSyncOrigin();
++  }
++  return syncOrigin;
++}
++
++function abandonSyncOrigin(reason: string): void {
++  if (!syncOrigin) return;
++  console.warn(
++    `[sync-origin] ${syncOrigin} failed (${reason}); the board's shapes use its own origin from now on`
++  );
++  syncOrigin = null;
++}
++
++function waitOrAbort(ms: number, init?: RequestInit): Promise<void> {
++  return new Promise((resolve, reject) => {
++    const signal = init?.signal;
++    if (signal?.aborted) {
++      reject(new DOMException('Aborted', 'AbortError'));
++      return;
++    }
++    const timer = setTimeout(resolve, ms);
++    signal?.addEventListener(
++      'abort',
++      () => {
++        clearTimeout(timer);
++        reject(new DOMException('Aborted', 'AbortError'));
++      },
++      { once: true }
++    );
++  });
++}
++
++function isAbort(error: unknown, init?: RequestInit): boolean {
++  return (
++    (error instanceof DOMException && error.name === 'AbortError') ||
++    Boolean(init?.signal?.aborted)
++  );
++}
++
++/**
++ * The URL a shape request goes to on the sync origin, or null when it stays where it is: no sync origin, not a
++ * request to the board's own origin, not a shape, or not a live request.
++ */
++export function toSyncOriginUrl(input: RequestInfo | URL): string | null {
++  const origin = getSyncOrigin();
++  if (!origin || (typeof input === 'object' && !(input instanceof URL))) {
++    return null;
++  }
++  let url: URL;
++  try {
++    url = new URL(input.toString(), window.location.href);
++  } catch {
++    return null;
++  }
++  if (
++    url.origin !== window.location.origin ||
++    !url.pathname.startsWith(SHAPE_PATH_PREFIX) ||
++    url.searchParams.get('live') !== 'true'
++  ) {
++    return null;
++  }
++  return `${origin}${url.pathname}${url.search}`;
++}
++
++/**
++ * Fetch a live shape request on the sync origin. Resolves with its answer, or with null when the request is to go to
++ * the board's own origin instead (the sync origin is left then); throws an abort, and the third network error.
++ */
++export async function fetchOnSyncOrigin(
++  url: string,
++  init?: RequestInit
++): Promise<Response | null> {
++  for (let attempt = 0; ; attempt++) {
++    try {
++      const response = await fetch(url, init);
++      if (!response.ok) {
++        return response;
++      }
++      if (!response.headers.has('electric-offset')) {
++        abandonSyncOrigin('its answer does not expose the Electric headers');
++        return null;
++      }
++      return response;
++    } catch (error) {
++      if (isAbort(error, init) || attempt >= RETRY_DELAYS_MS.length) {
++        throw error;
++      }
++      await waitOrAbort(RETRY_DELAYS_MS[attempt] ?? 1000, init);
++    }
++  }
++}

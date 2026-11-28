@@ -1,0 +1,3 @@
+# A unified diff's context line for an empty source line is a single space: part of the format, not trailing
+# whitespace (git diff --check would flag it). The vendored patch stays byte-identical to its source.
+kanban/patches/*.patch -whitespace

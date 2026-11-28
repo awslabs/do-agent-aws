@@ -1,0 +1,21 @@
+*.sh
+.env
+.fun
+build.sh
+exec.sh
+logs.sh
+pull.sh
+push.sh
+run.sh
+status.sh
+stop.sh
+
+wd/
+
+# Session working files, OMC state and the maintainer tools: not part of the image (the Dockerfile adds Container-Root only)
+scratch/
+.omc/
+tools/
+# Python byte-code caches (a scan.py or dashboard run leaves them next to the source)
+__pycache__/
+kanban/

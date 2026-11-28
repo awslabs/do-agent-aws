@@ -1,0 +1,46 @@
+/* Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. */
+/* SPDX-License-Identifier: Apache-2.0 */
+/* The Board page - the harness look (docs/UI-STYLE.md): the tokens and components of /__harness/harness.css, linked first
+   by index.html and served on this host too. Only this page's own layout is here, every colour one of the tokens; the state
+   pill, the error callout, the cards and the empty state are the stylesheet's components. No external asset. */
+header.hs-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--hs-space-2) var(--hs-space-3); }
+header.hs-header p { margin: 0; flex: 1 1 24em; }
+main { padding: var(--hs-space-3) var(--hs-space-4) var(--hs-space-4); }
+#notice { margin: 0 0 var(--hs-space-3); }
+/* small labels on a card - a word in the text token, never a colour alone. A STATE chip (an attempt running, idle or
+   gone, the attempt count) carries a shape filled with the fixed status step; a PRIORITY chip is a category, not a state,
+   so it takes the neutral tints (text, accent, muted), never a status step */
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; line-height: 1.2; padding: 2px 7px; border-radius: 10px; color: var(--hs-fg); background: color-mix(in srgb, var(--hs-muted) 12%, var(--hs-surface)); white-space: nowrap; }
+.chip.ok::before, .chip.idle::before, .chip.off::before { content: ""; width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--hs-fg); flex: none; }
+.chip.ok { background: color-mix(in srgb, var(--hs-ok) 12%, var(--hs-surface)); }
+.chip.ok::before { background: var(--hs-ok); }
+.chip.off { color: var(--hs-muted); background: transparent; border: 1px dashed var(--hs-border); }
+.chip.off::before { border-style: dotted; border-color: var(--hs-muted); }
+.chip.pri-urgent { background: color-mix(in srgb, var(--hs-fg) 14%, var(--hs-surface)); }
+.chip.pri-high { background: color-mix(in srgb, var(--hs-accent) 14%, var(--hs-surface)); }
+.chip.pri-medium, .chip.pri-low { color: var(--hs-muted); }
+.card-key, .attempt-branch { font: 12px/1.4 var(--hs-mono); background: color-mix(in srgb, var(--hs-fg) 8%, transparent); border-radius: 4px; padding: 1px 5px; overflow-wrap: anywhere; }
+/* the board: one column per state, side by side; on a phone the columns stack and each keeps its own scroll */
+.board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(250px, 1fr); gap: var(--hs-space-3); overflow-x: auto; align-items: start; padding-bottom: 6px; }
+.column { background: color-mix(in srgb, var(--hs-surface) 40%, var(--hs-bg)); border-radius: var(--hs-radius); padding: 10px; min-width: 0; }
+.column-title { display: flex; justify-content: space-between; align-items: center; margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--hs-muted); }
+.cards, .attempts, #unlinked ul { list-style: none; margin: 0; padding: 0; }
+.card { padding: 9px 11px; margin: 0 0 8px; }
+.card-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 4px; }
+.card-name { font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
+.card-meta { margin-top: 4px; font-size: 12px; }
+.attempts { margin-top: 8px; border-top: 1px solid var(--hs-border); padding-top: 6px; }
+.attempt { padding: 4px 0; font-size: 12px; }
+.attempt-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.attempt-name { font-weight: 600; overflow-wrap: anywhere; }
+.attempt-facts { margin-top: 2px; font-size: 12px; }
+#unlinked { margin-top: var(--hs-space-4); padding: 12px var(--hs-space-3); }
+#unlinked h2 { margin: 0 0 4px; font-size: 15px; }
+#unlinked li { padding: 6px 0; border-top: 1px solid var(--hs-border); }
+#unlinked li .hs-empty { padding: 10px 4px; border: 0; text-align: left; }
+#legend { margin: var(--hs-space-3) 0 0; font-size: 13px; }
+@media (max-width: 700px) {
+  main { padding-left: 16px; padding-right: 16px; }
+  header.hs-header p { flex-basis: 100%; }
+  .board { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: 1fr; overflow-x: visible; }
+}

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "name": "claude-code-harness",
+      "error": ["API Error", "safeguards flagged", "rate.?limit(ed)?"],
+      "blocked": ["❯\\s*1\\.", "Enter to select", "Tab/Arrow", "awaiting", "should I proceed", "y/n"],
+      "working": ["esc to interrupt", "✻|✶|✽|⚒", "Compacting", "running (stop hooks|scheduled)", "↓\\s*[\\d.]+k?\\s*tokens"],
+      "idle": ["^\\s*do-agent-aws · .* · ctx:\\d+%"],
+      "contextPct": "ctx:(\\d+)%"
+    }
+  ]
+}

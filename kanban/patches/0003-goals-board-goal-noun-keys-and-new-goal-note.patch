@@ -1,0 +1,269 @@
+diff --git a/crates/remote/src/db/organizations.rs b/crates/remote/src/db/organizations.rs
+index 7dbd917..6297b93 100644
+--- a/crates/remote/src/db/organizations.rs
++++ b/crates/remote/src/db/organizations.rs
+@@ -366,12 +366,8 @@ fn personal_org_slug(user_id: Uuid) -> String {
+ /// Derive an issue prefix from an organization name.
+ /// Takes the first 3 uppercase letters from the name.
+ /// Examples: "Bloop" -> "BLO", "My Project" -> "MYP"
+-fn derive_issue_prefix(name: &str) -> String {
+-    let letters: String = name.chars().filter(|c| c.is_ascii_alphabetic()).collect();
+-    let prefix: String = letters.chars().take(3).collect::<String>().to_uppercase();
+-    if prefix.is_empty() {
+-        "ISS".to_string()
+-    } else {
+-        prefix
+-    }
++fn derive_issue_prefix(_name: &str) -> String {
++    // do-agent-aws Goals board: every card is one of the agent's goals, so a new organization's keys are GOAL-n
++    // (kanban/patches/0003); an organization that exists keeps its prefix, and a card its key
++    "GOAL".to_string()
+ }
+diff --git a/packages/ui/src/components/KanbanIssuePanel.tsx b/packages/ui/src/components/KanbanIssuePanel.tsx
+index 7cf207a..3e5692f 100644
+--- a/packages/ui/src/components/KanbanIssuePanel.tsx
++++ b/packages/ui/src/components/KanbanIssuePanel.tsx
+@@ -341,9 +341,9 @@ export function KanbanIssuePanel({
+               value={formData.title}
+               onChange={(value) => onFormChange('title', value)}
+               onKeyDown={handleTitleKeyDown}
+-              placeholder="Issue Title..."
++              placeholder="Goal Title..."
+               autoFocus={isCreateMode}
+-              aria-label="Issue title"
++              aria-label="Goal title"
+               disabled={isSubmitting}
+               className={cn(
+                 'px-base text-lg font-medium text-high',
+@@ -485,6 +485,13 @@ export function KanbanIssuePanel({
+           </div>
+         </div>
+ 
++        {/* do-agent-aws Goals board: what creating a goal does here (kanban/patches/0003) */}
++        {isCreateMode && (
++          <p className="px-base pt-base text-sm text-low" data-testid="new-goal-dispatch-note">
++            {t('kanban.newGoalDispatchNote')}
++          </p>
++        )}
++
+         {/* Create Draft Workspace Toggle (Create mode only) */}
+         {isCreateMode && (
+           <div className="p-base border-t">
+diff --git a/packages/web-core/src/i18n/locales/en/common.json b/packages/web-core/src/i18n/locales/en/common.json
+index 1e13a23..2dda71b 100644
+--- a/packages/web-core/src/i18n/locales/en/common.json
++++ b/packages/web-core/src/i18n/locales/en/common.json
+@@ -150,12 +150,12 @@
+       "action": "Rename",
+       "renaming": "Renaming..."
+     },
+-    "unlinkFromIssue": "Unlink from issue",
++    "unlinkFromIssue": "Unlink from goal",
+     "deleteWorkspace": "Delete workspace",
+     "unlink": "Unlink",
+     "delete": "Delete",
+-    "unlinkConfirmMessage": "Are you sure you want to unlink this workspace from the issue? The workspace will still exist but will no longer be associated with this issue.",
+-    "deleteConfirmMessage": "Are you sure you want to delete this workspace? This will unlink it from the issue and delete the local workspace. This action cannot be undone.",
++    "unlinkConfirmMessage": "Are you sure you want to unlink this workspace from the goal? The workspace will still exist but will no longer be associated with this goal.",
++    "deleteConfirmMessage": "Are you sure you want to delete this workspace? This will unlink it from the goal and delete the local workspace. This action cannot be undone.",
+     "unlinkError": "Failed to unlink workspace",
+     "deleteError": "Failed to delete workspace",
+     "linkError": "Failed to link workspace",
+@@ -165,7 +165,7 @@
+       "description": "Are you sure you want to delete this workspace? This action cannot be undone.",
+       "deleteBranchLabel": "Delete branch",
+       "cannotDeleteOpenPr": "Cannot delete branch while PR is open",
+-      "unlinkFromIssueLabel": "Also unlink from issue"
++      "unlinkFromIssueLabel": "Also unlink from goal"
+     }
+   },
+   "fileTree": {
+@@ -295,7 +295,7 @@
+       "goTo": "Go To (G ...)",
+       "workspace": "Workspace (W ...)",
+       "view": "View (V ...)",
+-      "issues": "Issues (I ...)",
++      "issues": "Goals (I ...)",
+       "git": "Git (X ...)",
+       "yank": "Yank (Y ...)",
+       "toggle": "Toggle (T ...)",
+@@ -326,16 +326,16 @@
+       "toggle-preview-mode": "Toggle Preview panel",
+       "toggle-left-sidebar": "Toggle Left Sidebar",
+       "toggle-left-main-panel": "Toggle Chat panel",
+-      "create-issue": "Create Issue",
++      "create-issue": "Create Goal",
+       "change-issue-status": "Change Status",
+       "change-issue-priority": "Change Priority",
+       "change-assignees": "Change Assignees",
+-      "make-sub-issue-of": "Make Sub-issue of",
+-      "add-sub-issue": "Add Sub-issue",
++      "make-sub-issue-of": "Make Sub-goal of",
++      "add-sub-issue": "Add Sub-goal",
+       "remove-parent-issue": "Remove Parent",
+       "link-workspace": "Link Workspace",
+-      "duplicate-issue": "Duplicate Issue",
+-      "delete-issue": "Delete Issue",
++      "duplicate-issue": "Duplicate Goal",
++      "delete-issue": "Delete Goal",
+       "git-create-pr": "Create Pull Request",
+       "git-merge": "Merge branch",
+       "git-rebase": "Rebase branch",
+@@ -361,11 +361,11 @@
+     "noCommands": "No commands available for this agent."
+   },
+   "kanban": {
+-    "noVisibleStatuses": "All statuses are hidden. Use display settings or switch to another tab to view issues.",
++    "noVisibleStatuses": "All statuses are hidden. Use display settings or switch to another tab to view goals.",
+     "noProjectFound": "No project found",
+     "unassigned": "Unassigned",
+     "noTagsAvailable": "No tags available",
+-    "createNewIssue": "Create new issue",
++    "createNewIssue": "Create new goal",
+     "searchTags": "Search tags...",
+     "selectColorFor": "Select color for",
+     "createTag": "Create",
+@@ -384,12 +384,13 @@
+     "moreActions": "More actions",
+     "closePanel": "Close panel",
+     "copyLink": "Copy link",
+-    "issueTitlePlaceholder": "Issue Title...",
++    "issueTitlePlaceholder": "Goal Title...",
+     "issueDescriptionPlaceholder": "Enter task description here...",
+     "createDraftWorkspaceImmediately": "Create draft workspace immediately",
+-    "createDraftWorkspaceDescription": "After creating the issue, open the workspace creation form pre-filled with the issue details",
+-    "createIssue": "Create Issue",
+-    "newIssue": "New Issue",
++    "createDraftWorkspaceDescription": "After creating the goal, open the form for a workspace on a vibe-kanban host linked to this board (none is linked by default), filled in with the goal",
++    "newGoalDispatchNote": "A new goal goes to the goals file; the autonomy loop's Claude Code works on it at its next fire (start the loop if it has stopped).",
++    "createIssue": "Create Goal",
++    "newIssue": "New Goal",
+     "previewCodeBlock": "[Code block]",
+     "previewImage": "[Image]",
+     "previewImageWithName": "[Image: {{name}}]",
+@@ -402,9 +403,9 @@
+     "unknownError": "Unknown error",
+     "failedToUploadFile": "Failed to upload {{filename}}: {{message}}",
+     "downloadAttachment": "Download attachment",
+-    "subIssues": "Sub-issues",
+-    "noSubIssues": "No sub-issues",
+-    "markIndependentIssue": "Mark as independent issue",
++    "subIssues": "Sub-goals",
++    "noSubIssues": "No sub-goals",
++    "markIndependentIssue": "Mark as independent goal",
+     "parentIssue": "Parent",
+     "subIssueIndicator": "↳",
+     "viewTabs": {
+@@ -418,7 +419,7 @@
+     },
+     "team": "Team",
+     "personal": "Personal",
+-    "searchPlaceholder": "Search issues...",
++    "searchPlaceholder": "Search goals...",
+     "filters": "Filters",
+     "clearFilters": "Clear filters",
+     "filtersDescription": "Adjust filters and sorting for this board view.",
+@@ -449,7 +450,7 @@
+     "assignee": "Assignee",
+     "self": "Me",
+     "priority": "Priority",
+-    "subIssuesFilterLabel": "Sub-issues",
++    "subIssuesFilterLabel": "Sub-goals",
+     "workspacesFilterLabel": "Workspaces",
+     "selectAssignees": "Select assignees...",
+     "relationships": "Relationships",
+@@ -463,7 +464,7 @@
+     "changeColor": "Change color",
+     "editName": "Edit name",
+     "deleteStatus": "Delete status",
+-    "cannotDeleteWithIssues": "Move issues first",
++    "cannotDeleteWithIssues": "Move goals first",
+     "lastVisibleStatus": "At least one status must be visible",
+     "showStatus": "Show status",
+     "hideStatus": "Hide status",
+@@ -474,19 +475,19 @@
+     "projectsGuide": {
+       "intro": {
+         "title": "Welcome",
+-        "content": "Welcome to Vibe Kanban. Use the help sections in this panel to learn how things work, then create your first issue. You can re-open this help dialog or give feedback anytime from the navbar."
++        "content": "Welcome to Vibe Kanban. Use the help sections in this panel to learn how things work, then create your first goal. You can re-open this help dialog or give feedback anytime from the navbar."
+       },
+       "welcome": {
+         "title": "Projects",
+-        "content": "The project page is where you manage issues. You can view your issues as a kanban board, or as a list, and filter by status, tag, assignee and more."
++        "content": "The project page is where you manage goals. You can view your goals as a kanban board, or as a list, and filter by status, tag, assignee and more."
+       },
+       "issues": {
+-        "title": "Issues",
+-        "content": "Each issue represents a feature or problem to solve. Issues have statuses, priorities, assignees, tags, relationships, comments, sub-issues and more."
++        "title": "Goals",
++        "content": "Each goal represents a feature or problem to solve. Goals have statuses, priorities, assignees, tags, relationships, comments, sub-goals and more."
+       },
+       "workspaces": {
+         "title": "Workspaces",
+-        "content": "To start working on an issue, create a workspace. A single issue can have multiple workspaces. Issues describe the work to be done, workspaces are where the work happens."
++        "content": "To start working on a goal, create a workspace. A single goal can have multiple workspaces. Goals describe the work to be done, workspaces are where the work happens."
+       },
+       "organizations": {
+         "title": "Invite your team",
+diff --git a/packages/web-core/src/i18n/locales/en/projects.json b/packages/web-core/src/i18n/locales/en/projects.json
+index 8e64974..7570f0d 100644
+--- a/packages/web-core/src/i18n/locales/en/projects.json
++++ b/packages/web-core/src/i18n/locales/en/projects.json
+@@ -10,7 +10,7 @@
+   },
+   "deleteProjectDialog": {
+     "title": "Delete Project?",
+-    "description": "This will permanently delete \"{{name}}\" and all its issues. This action cannot be undone.",
++    "description": "This will permanently delete \"{{name}}\" and all its goals. This action cannot be undone.",
+     "error": "Failed to delete project. Please try again."
+   }
+ }
+diff --git a/packages/web-core/src/i18n/locales/en/settings.json b/packages/web-core/src/i18n/locales/en/settings.json
+index bb5d895..4e631b8 100644
+--- a/packages/web-core/src/i18n/locales/en/settings.json
++++ b/packages/web-core/src/i18n/locales/en/settings.json
+@@ -588,7 +588,7 @@
+         },
+         "defaultRepos": {
+           "label": "Default Repositories",
+-          "description": "Repositories that are automatically added when creating workspaces from this project's issues.",
++          "description": "Repositories that are automatically added when creating workspaces from this project's goals.",
+           "empty": "No default repositories configured",
+           "addButton": "Add",
+           "addNew": "Add new repository...",
+diff --git a/packages/web-core/src/i18n/locales/en/tasks.json b/packages/web-core/src/i18n/locales/en/tasks.json
+index 2bcdde9..910c289 100644
+--- a/packages/web-core/src/i18n/locales/en/tasks.json
++++ b/packages/web-core/src/i18n/locales/en/tasks.json
+@@ -511,7 +511,7 @@
+   },
+   "linkPrToIssue": {
+     "title": "Link Pull Request",
+-    "description": "Link an existing pull request to this issue.",
++    "description": "Link an existing pull request to this goal.",
+     "urlTab": "From URL",
+     "browseTab": "Browse",
+     "urlLabel": "Pull Request URL",
+diff --git a/packages/web-core/src/pages/kanban/ProjectRightSidebarContainer.tsx b/packages/web-core/src/pages/kanban/ProjectRightSidebarContainer.tsx
+index f064d14..ac0efbf 100644
+--- a/packages/web-core/src/pages/kanban/ProjectRightSidebarContainer.tsx
++++ b/packages/web-core/src/pages/kanban/ProjectRightSidebarContainer.tsx
+@@ -112,7 +112,7 @@ function WorkspaceCreatePanel({
+             className={`${breadcrumbButtonClass} shrink-0`}
+             aria-label="Open linked issue"
+           >
+-            {linkedIssueSimpleId ?? 'Issue'}
++            {linkedIssueSimpleId ?? 'Goal'}
+           </button>
+           <span className="text-low text-sm shrink-0">/</span>
+           <span className={breadcrumbButtonClass}>
+@@ -247,7 +247,7 @@ function WorkspaceSessionPanel({
+                     className={`${breadcrumbButtonClass} shrink-0`}
+                     aria-label="Open linked issue"
+                   >
+-                    {issueSimpleId ?? 'Issue'}
++                    {issueSimpleId ?? 'Goal'}
+                   </button>
+                   <span className="text-low text-sm shrink-0">/</span>
+                   <button

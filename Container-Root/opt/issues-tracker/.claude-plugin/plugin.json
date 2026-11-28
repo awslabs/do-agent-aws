@@ -1,0 +1,24 @@
+{
+    "name": "issues-tracker-runtime",
+    "version": "0.1.9",
+    "description": "Read-only GitHub PR/issue triage tooling with a human-gated pen: a bounded read wrapper, inventory with coverage proof, a deterministic picker, a headless worker loop, a redaction check, and the hooks that block outward writes.",
+    "license": "Apache-2.0",
+    "keywords": [
+        "github",
+        "pull-request",
+        "issue-tracking",
+        "claude-code",
+        "triage",
+        "read-only"
+    ],
+    "hooks": "./.claude/hooks/hooks.json",
+    "userConfig": {
+        "operator_login": {
+            "type": "string",
+            "title": "GitHub login whose PRs and issues are ours",
+            "default": "",
+            "required": false,
+            "description": "Informational: set ISSUES_GH_LOGIN in the worker environment; when unset the tools resolve the login once from `gh api user`."
+        }
+    }
+}

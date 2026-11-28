@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en" class="hs-root">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loop status - Agent loop</title>
+<link rel="stylesheet" href="/__harness/harness.css">
+<link rel="stylesheet" href="style.css">
+<script src="app.js" defer></script>
+</head>
+<body class="hs-page" data-view="status">
+<header class="hs-header">
+<h1 id="status-title">Loop status</h1>
+<p class="sub" id="loop-deck-line" hidden><a id="loop-deck" class="back">&larr; Loop Deck: every loop of this harness</a></p>
+<p class="sub" id="status-about"></p>
+<p id="freshness" class="freshness" role="status" aria-live="polite">loading the loop's status&hellip;</p>
+</header>
+<main>
+<section id="now" aria-labelledby="h-now">
+<h2 id="h-now">Now</h2>
+<ul class="stats" id="status-now"></ul>
+</section>
+<section id="status-fires-section" aria-labelledby="h-status-fires" hidden>
+<h2 id="h-status-fires">Fires</h2>
+<div class="tablewrap"><table id="status-fires">
+<caption class="sr">The messages this loop answered, newest first</caption>
+<thead><tr><th scope="col">fire</th><th scope="col">began (UTC)</th><th scope="col">duration</th><th scope="col">result</th><th scope="col">message</th></tr></thead>
+<tbody></tbody>
+</table></div>
+</section>
+<section id="status-log-section" aria-labelledby="h-status-log" hidden>
+<h2 id="h-status-log">Log</h2>
+<pre class="notes" id="status-log"></pre>
+</section>
+<p><a href="/">Agent loop</a> - the autonomy loop's own page</p>
+</main>
+</body>
+</html>

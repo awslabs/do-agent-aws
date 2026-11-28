@@ -1,0 +1,43 @@
+Do Agent on AWS - third-party software in this repository
+
+This repository includes the third-party software below, copied into it byte for byte. Each project keeps its own
+license, and its copyright notices, in its folder; those files are the license texts that apply to it, and each
+folder's VENDORED.md records where the copy came from.
+
+** LogLearner (minimal runtime) - https://github.com/dmvevents/loglearning
+   In this repository: Container-Root/opt/loglearner
+   License: MIT - the license text and copyright notice in Container-Root/opt/loglearner/LICENSE
+
+** gpu-cluster-basics (LogLearner example knowledge pack) - https://github.com/dmvevents/loglearning
+   In this repository: Container-Root/opt/loglearner-packs
+   License: MIT - the license text and copyright notice in Container-Root/opt/loglearner-packs/LICENSE
+
+** Loop Deck - https://github.com/dmvevents/loop-deck
+   In this repository: Container-Root/opt/loop-deck
+   License: MIT - the license text and copyright notice in Container-Root/opt/loop-deck/LICENSE
+
+** tmux-agent - https://github.com/dmvevents/tmux-agent-public
+   In this repository: Container-Root/opt/tmux-agent
+   License: Apache-2.0 - the license text in Container-Root/opt/tmux-agent/LICENSE, its copyright notice and
+   attribution notices in Container-Root/opt/tmux-agent/NOTICE
+
+** issues tracker (runtime) - https://github.com/dmvevents/issues-tracker-runtime
+   In this repository: Container-Root/opt/issues-tracker
+   License: Apache-2.0 - the license text in Container-Root/opt/issues-tracker/LICENSE
+
+** ECC - https://github.com/affaan-m/ECC
+   In this repository: Container-Root/agent/skills/eval-harness/SKILL.md, adapted from the project's
+   skills/eval-harness/SKILL.md
+   License: MIT - the license text and copyright notice in Container-Root/agent/skills/eval-harness/LICENSE
+
+** superpowers 7.0.2 - https://github.com/obra/superpowers
+   In this repository: Container-Root/agent/skills/condition-based-waiting, defense-in-depth and root-cause-tracing,
+   each SKILL.md adapted from the project's skills/systematic-debugging/<name>.md
+   License: MIT - the license text and copyright notice in the LICENSE file of each of those three folders
+
+Software that the image build downloads or installs is not copied into this repository. THIRD-PARTY-LICENSES lists
+every component the container image installs, each with its license; among them are postgresql_binaries, the
+PostgreSQL server that the memory API's pg0-embedded unpacks at build time, swagger-ui-dist, downloaded at build time,
+and Claude Code, installed from npm, whose use is subject to Anthropic's commercial terms. Plane and pgsty/silo, both
+AGPL-3.0, are pulled as their upstream images at run time, and only when the Plane board is turned on (README.md,
+"License and third-party software").

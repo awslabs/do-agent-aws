@@ -1,0 +1,104 @@
+# /setup/third-party.txt - the registry of the third-party components the installers bring into the image OUTSIDE the three
+# package managers /agent/sbom.py reads by itself (dpkg, npm's package.json files, Python's distribution metadata): release
+# archives, upstream install scripts, git clones, container-image exports (crane), the vendored trees under /opt, the Claude
+# Code plugins and the model weights. /sbom.sh lists these lines as the last section of /SBOM.txt (docs/manual/supply-chain.md "Software bill of
+# materials"); /test-sbom.sh fails when a line's installer no longer exists, a version probe gives nothing, or an installer
+# brings something no line here names - so this file cannot rot silently. One line per component:
+#
+#   <name> <version> - <license> - <upstream> - <installer>
+#       <name>      no spaces; <version> a literal, or $(command) run in the image by sh when the file is generated (its
+#                   output's words joined with commas: two node trees read v1,v2); the installed version where a command
+#                   reports one, else the installer's pin read from /setup/install-*.sh, else the vendored tree's own record
+#       <license>   the upstream repository's LICENSE as its SPDX identifier (several: `A OR B`); where a file in the image
+#                   says otherwise, the comment above the line says so
+#       <upstream>  where the code comes from; <installer> the setup/install-*.sh that brings it, or the /opt tree the
+#                   Dockerfile's ADD Container-Root puts in place (the tree's VENDORED.md names its upstream commit)
+#   dpkg:<package> - <license> - <upstream> - <installer>       an installed deb that ships no /usr/share/doc/<package>/copyright
+#   npm:<package> - <license> - <upstream> - <installer>        an npm package whose package.json declares no license, or only
+#                                                                 points at a file (SEE LICENSE IN <file>, UNLICENSED)
+#   python:<distribution> - <license> - <upstream> - <installer>    a Python distribution whose metadata declares no license
+#   none:<installer> - <why>                                    an installer that brings no third-party code at all
+# A line of any other shape fails the generation, and with it the build. ` - ` (space, hyphen, space) separates the fields and
+# appears nowhere inside one.
+
+# --- runtimes, fetched by their upstream install scripts or as release archives ---
+nodejs $(ls /home/agent/.nvm/versions/node) - MIT - https://github.com/nodejs/node - install-nodejs.sh (nvm install; every node tree nvm left is listed, each with its own npm in the npm section)
+nvm $(sed -n 's/^export NVM_VERSION=//p' /setup/install-nodejs.sh) - MIT - https://github.com/nvm-sh/nvm - install-nodejs.sh
+bun $(/usr/local/bin/bun --version) - MIT - https://github.com/oven-sh/bun - install-bun.sh (bun.sh/install; the claude-mem hooks' runtime)
+uv $(/home/agent/.local/bin/uv --version | awk '{print $2}') - Apache-2.0 OR MIT - https://github.com/astral-sh/uv - install-uv.sh (astral.sh/uv/install.sh, root's copy)
+uv-for-hindsight $(/home/hindsight/.local/bin/uv --version | awk '{print $2}') - Apache-2.0 OR MIT - https://github.com/astral-sh/uv - install-hindsight-ui.sh (the hindsight user's own copy)
+# the CPython uv downloaded for the hindsight-api tool environment: a python-build-standalone release (the build scripts there
+# are MPL-2.0; the Python they build is CPython under the PSF license)
+cpython-standalone $(ls /home/hindsight/.local/share/uv/python/ | sed -n 's/^cpython-\([0-9]*\.[0-9]*\.[0-9]*\)-linux.*/\1/p' | sort -u) - PSF-2.0 - https://github.com/astral-sh/python-build-standalone - install-hindsight-ui.sh (uv tool install --python)
+# the PostgreSQL server the memory API runs: theseus-rs/postgresql_binaries' build of PostgreSQL, carried inside the pg0 binary
+# of pg0-embedded (MIT, in the Python section) and unpacked under /home/hindsight/.pg0/installation/<version> when the build
+# pre-warms the API's database; that folder keeps PostgreSQL's COPYRIGHT and the build's LICENSE, both the PostgreSQL License
+postgresql_binaries $(ls /home/hindsight/.pg0/installation/) - PostgreSQL - https://github.com/theseus-rs/postgresql_binaries - install-hindsight-ui.sh (unpacked by pg0-embedded's pre-warm start)
+
+# --- command-line tools, fetched as release archives or binaries ---
+aws-cli $(/usr/local/bin/aws --version 2>/dev/null | sed 's#^aws-cli/##; s/ .*//') - Apache-2.0 - https://github.com/aws/aws-cli - install-aws.sh (awscli.amazonaws.com zip; its bundled Python distributions are in the Python section)
+kubectl $(/usr/local/bin/kubectl version --client 2>/dev/null | sed -n 's/^Client Version: //p') - Apache-2.0 - https://github.com/kubernetes/kubernetes - install-kubectl.sh (dl.k8s.io)
+kubectx $(git -C /opt/kubectx rev-parse --short HEAD) - Apache-2.0 - https://github.com/ahmetb/kubectx - install-kubectx.sh (git clone; kubectx and kubens)
+crane $(/usr/local/bin/crane version) - Apache-2.0 - https://github.com/google/go-containerregistry - install-crane.sh (release tarball)
+buildctl $(/usr/local/bin/buildctl --version | awk '{print $3}') - Apache-2.0 - https://github.com/moby/buildkit - install-buildctl.sh (release tarball, sha256-checked)
+
+# --- servers and pages, exported from upstream container images or npm tarballs ---
+headlamp $(sed -n 's/^export HEADLAMP_VERSION=//p' /setup/install-headlamp.sh) - Apache-2.0 - https://github.com/kubernetes-sigs/headlamp - install-headlamp.sh (crane export of ghcr.io/headlamp-k8s/headlamp: headlamp-server, its frontend and plugins)
+# the standalone build's own package.json reads "ISC"; the repository's LICENSE is MIT
+hindsight-control-plane $(python3 -c "import json;print(json.load(open('/opt/hindsight/control-plane/package.json'))['version'])") - MIT - https://github.com/vectorize-io/hindsight - install-hindsight-ui.sh (crane export of ghcr.io/vectorize-io/hindsight-control-plane; its node_modules are in the npm section)
+hindsight-coding-agents $(python3 -c "import json;print(json.load(open('/home/agent/.hindsight/coding-agents/package.json'))['version'])") - MIT - https://github.com/vectorize-io/hindsight - install-hindsight.sh (the npx installer's hooks, installed under /home/agent/.hindsight)
+swagger-ui-dist $(python3 -c "import json;print(json.load(open('/opt/swagger-ui-dist/package.json'))['version'])") - Apache-2.0 - https://github.com/swagger-api/swagger-ui - install-swagger-ui.sh (npm tarball, sha256-checked; the bundle's own third-party notices are swagger-ui-bundle.js.LICENSE.txt beside it)
+vibe-kanban-binary $(ls /home/agent/.vibe-kanban/bin/) - Apache-2.0 - https://github.com/BloopAI/vibe-kanban - install-vibe-kanban.sh (the platform binary the npm wrapper fetched at build time)
+
+# --- the model weights hindsight-api fetched when the build pre-warmed it ---
+BAAI/bge-small-en-v1.5 $(ls /home/hindsight/.cache/huggingface/hub/models--BAAI--bge-small-en-v1.5/snapshots/ | cut -c1-12) - MIT - https://huggingface.co/BAAI/bge-small-en-v1.5 - install-hindsight-ui.sh (the embedding model, the hindsight-api pre-warm)
+hindsight-ai/hs-rerank-1 $(ls /home/hindsight/.cache/huggingface/hub/models--hindsight-ai--hs-rerank-1/snapshots/ | cut -c1-12) - MIT - https://huggingface.co/hindsight-ai/hs-rerank-1 - install-hindsight-ui.sh (the reranking model hindsight-api 1.x fetches in the pre-warm; fine-tuned from jhu-clsp/mmBERT-small)
+
+# --- git clones and vendored trees ---
+communication-engine $(git -C /opt/comms rev-parse --short HEAD) - Apache-2.0 - https://github.com/dmvevents/communication-engine - install-comms.sh (git clone at the pinned commit)
+tmux-agent $(python3 -c "import json;d=json.load(open('/opt/tmux-agent/dist/build.json'));print(d['version']+'+'+d['commit'])") - Apache-2.0 (bundled in this repository at Container-Root/opt/tmux-agent, its LICENSE and NOTICE with their copyright notices kept there) - https://github.com/dmvevents/tmux-agent-public - install-tmux-agent-dashboard.sh (vendored prebuilt tree /opt/tmux-agent, VENDORED.md; its node_modules are in the npm section)
+loglearner $(grep -m1 -oE 'source head .[0-9a-f]+.' /opt/loglearner/VENDORED.md | grep -oE '[0-9a-f]{6,}') - MIT (bundled in this repository at Container-Root/opt/loglearner, its LICENSE with its copyright notice kept there) - https://github.com/dmvevents/loglearning - install-loglearner.sh (vendored minimal runtime /opt/loglearner, VENDORED.md)
+loop-deck $(python3 -c "import json;d=json.load(open('/opt/loop-deck/RELEASE.json'));print(d['deck_version']+'+'+d['source_sha'][:7])") - MIT (bundled in this repository at Container-Root/opt/loop-deck, its LICENSE with its copyright notice kept there) - https://github.com/dmvevents/loop-deck - /opt/loop-deck (vendored release tree, VENDORED.md; no installer: served as shipped)
+issues-tracker $(awk '{print $2}' /opt/issues-tracker/EXPORT-VERSION) - Apache-2.0 (bundled in this repository at Container-Root/opt/issues-tracker, its LICENSE kept there) - https://github.com/dmvevents/issues-tracker-runtime (/opt/issues-tracker/VENDORED.md) - /opt/issues-tracker (vendored runtime, VENDORED.md; no installer: linked by the issues spoke)
+gpu-cluster-basics $(python3 -c "import json;print(json.load(open('/opt/loglearner-packs/gpu-cluster-basics.manifest.json'))['version'])") - MIT (bundled in this repository at Container-Root/opt/loglearner-packs, its LICENSE with its copyright notice kept there) - https://github.com/dmvevents/loglearning - /opt/loglearner-packs (vendored example knowledge pack, VENDORED.md; no installer: /agent/loglearner-packs.sh loads it at every start)
+
+# --- Claude Code plugins (claude plugin install) and the marketplace clones they come from; each plugin under the license
+# --- its own LICENSE states, else its marketplace's ---
+superpowers@claude-plugins-official $(python3 -c "import json;print(json.load(open('/home/agent/.claude/plugins/installed_plugins.json'))['plugins']['superpowers@claude-plugins-official'][0]['version'])") - MIT - https://github.com/anthropics/claude-plugins-official - install-plugins.sh
+context7@claude-plugins-official $(python3 -c "import json;print(json.load(open('/home/agent/.claude/plugins/installed_plugins.json'))['plugins']['context7@claude-plugins-official'][0]['version'])") - Apache-2.0 - https://github.com/anthropics/claude-plugins-official - install-plugins.sh (the MCP server configuration only; no LICENSE of its own)
+code-review@claude-plugins-official $(python3 -c "import json;print(json.load(open('/home/agent/.claude/plugins/installed_plugins.json'))['plugins']['code-review@claude-plugins-official'][0]['version'])") - Apache-2.0 - https://github.com/anthropics/claude-plugins-official - install-plugins.sh
+github@claude-plugins-official $(python3 -c "import json;print(json.load(open('/home/agent/.claude/plugins/installed_plugins.json'))['plugins']['github@claude-plugins-official'][0]['version'])") - Apache-2.0 - https://github.com/anthropics/claude-plugins-official - install-plugins.sh (the MCP server configuration only; no LICENSE of its own)
+claude-md-management@claude-plugins-official $(python3 -c "import json;print(json.load(open('/home/agent/.claude/plugins/installed_plugins.json'))['plugins']['claude-md-management@claude-plugins-official'][0]['version'])") - Apache-2.0 - https://github.com/anthropics/claude-plugins-official - install-plugins.sh
+ralph-loop@claude-plugins-official $(python3 -c "import json;print(json.load(open('/home/agent/.claude/plugins/installed_plugins.json'))['plugins']['ralph-loop@claude-plugins-official'][0]['version'])") - Apache-2.0 - https://github.com/anthropics/claude-plugins-official - install-plugins.sh
+oh-my-claudecode@omc $(python3 -c "import json;print(json.load(open('/home/agent/.claude/plugins/installed_plugins.json'))['plugins']['oh-my-claudecode@omc'][0]['version'])") - MIT - https://github.com/Yeachan-Heo/oh-my-claudecode - install-plugins.sh (its node_modules are in the npm section)
+claude-mem@thedotmack $(python3 -c "import json;print(json.load(open('/home/agent/.claude/plugins/installed_plugins.json'))['plugins']['claude-mem@thedotmack'][0]['version'])") - Apache-2.0 - https://github.com/thedotmack/claude-mem - install-claudemem.sh (the npx installer, pinned; its node_modules are in the npm section)
+marketplace-claude-plugins-official $(git -C /home/agent/.claude/plugins/marketplaces/claude-plugins-official rev-parse --short HEAD) - Apache-2.0 - https://github.com/anthropics/claude-plugins-official - install-plugins.sh (claude plugin marketplace add: the repository clone)
+marketplace-omc $(git -C /opt/claude-marketplaces/oh-my-claudecode rev-parse --short HEAD) - MIT - https://github.com/Yeachan-Heo/oh-my-claudecode - install-plugins.sh (claude plugin marketplace add: the repository clone)
+marketplace-thedotmack $(python3 -c "import json;print(json.load(open('/home/agent/.claude/plugins/marketplaces/thedotmack/package.json'))['version'])") - Apache-2.0 - https://github.com/thedotmack/claude-mem - install-claudemem.sh (the installer registers the marketplace: a copy of the repository)
+
+# --- debs without a copyright file (their license from the upstream repository) ---
+dpkg:gh - MIT - https://github.com/cli/cli - install-gh.sh (the GitHub CLI's own apt repository, cli.github.com)
+# ttyd is Ubuntu's package here (the apt section lists it); install-ttyd.sh's fallback - the upstream release binary at
+# /usr/local/bin/ttyd, for a base image whose apt has no ttyd - is NOT listed by anything: a base image that takes that path
+# needs a component line for it (tsl0922/ttyd, MIT), and /test-sbom.sh check 3 would not notice its absence on its own
+# the Docker Engine packages of the sandbox kit image (to/sandbox/template/sandbox.dockerfile); not in the harness image itself
+dpkg:docker-ce - Apache-2.0 - https://github.com/moby/moby - to/sandbox/template/sandbox.dockerfile (download.docker.com)
+dpkg:docker-ce-cli - Apache-2.0 - https://github.com/docker/cli - to/sandbox/template/sandbox.dockerfile (download.docker.com)
+dpkg:docker-buildx-plugin - Apache-2.0 - https://github.com/docker/buildx - to/sandbox/template/sandbox.dockerfile (download.docker.com)
+dpkg:docker-compose-plugin - Apache-2.0 - https://github.com/docker/compose - to/sandbox/template/sandbox.dockerfile (download.docker.com)
+
+# --- packages whose own metadata declares no license, or only points at a file ---
+# the npm wrapper's package.json has an empty license field; the repository is Apache-2.0 (the binary it fetches is listed above)
+npm:vibe-kanban - Apache-2.0 - https://github.com/BloopAI/vibe-kanban - install-vibe-kanban.sh
+# Claude Code and its native binary and SDK: package.json says SEE LICENSE IN README.md / LICENSE.md; those files read "(c) Anthropic
+# PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance"
+# and point at Anthropic's Commercial Terms of Service - proprietary, not an open-source license
+npm:@anthropic-ai/claude-code - Proprietary (Anthropic PBC, all rights reserved; the Legal Agreements at code.claude.com/docs/en/legal-and-compliance) - https://github.com/anthropics/claude-code - install-claude.sh
+npm:@anthropic-ai/claude-code-linux-x64 - Proprietary (Anthropic PBC, all rights reserved; the Legal Agreements at code.claude.com/docs/en/legal-and-compliance) - https://github.com/anthropics/claude-code - install-claude.sh (the platform-native binary, an optional dependency)
+npm:@anthropic-ai/claude-agent-sdk - Proprietary (Anthropic PBC, all rights reserved; the Legal Agreements at code.claude.com/docs/en/legal-and-compliance) - https://github.com/anthropics/claude-agent-sdk-typescript - install-plugins.sh (a dependency of the oh-my-claudecode plugin)
+
+# --- installers that bring no third-party code: configuration of what the others installed, and this repository's own files ---
+none:install-agent-learning.sh - registers the harness's own hooks, skills and knowledge files (Container-Root/agent) in the agent's Claude Code settings
+none:install-bashrc.sh - appends aliases and the tmux auto-attach block to root's .bashrc
+none:install-claude-onboarding.sh - seeds Claude Code's first-run answers in the image's configuration
+none:install-governance.sh - copies the harness's own operating rules (Container-Root/agent-rules) into the Claude configuration

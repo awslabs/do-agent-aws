@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en" class="hs-root">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent loop - do-agent-aws harness</title>
+<link rel="stylesheet" href="/__harness/harness.css">
+<link rel="stylesheet" href="style.css">
+<script src="app.js" defer></script>
+</head>
+<body class="hs-page" data-view="overview">
+<header class="hs-header">
+<h1>Agent loop</h1>
+<p class="sub" id="loop-deck-line" hidden><a id="loop-deck" class="back">&larr; Loop Deck: every loop of this harness</a></p>
+<p class="sub">the autonomy loop of this harness - its state, fires, goals and the fleet it runs in. Its two actions are in Control; the commands below are for you to copy.</p>
+<p id="freshness" class="freshness" role="status" aria-live="polite">loading the loop's state&hellip;</p>
+</header>
+<nav aria-label="Sections"><a href="#overview">Overview</a><a href="#control">Control</a><a href="#fires">Fires</a><a href="#fleet">Fleet</a><a href="#commands">Commands</a></nav>
+<main>
+<section id="overview" aria-labelledby="h-overview">
+<h2 id="h-overview">Overview</h2>
+<p class="headline" id="headline"></p>
+<ul class="stats" id="stats"></ul>
+<ul class="stats diag" id="diag" aria-label="Loop details"></ul>
+<h3>Needs attention</h3>
+<ul class="attention" id="attention"></ul>
+<div class="cols">
+<div><h3>Goals</h3><div id="goals"></div></div>
+<div><h3>Progress notes</h3><pre class="notes" id="notes"></pre></div>
+</div>
+</section>
+<section id="control" aria-labelledby="h-control">
+<h2 id="h-control">Control</h2>
+<p class="hint">Run next fire starts the loop with /agent/loop-start.sh: it removes the STOP flag, and the loop fires at once when it has goals; a running loop is left alone. Pause loop sets the STOP flag with /agent/loop-stop.sh: the loop halts before its next fire, and a fire in flight finishes. Each answer is the loop's state read back after the action.</p>
+<p class="hint" id="control-off" hidden>The controls are off: set UI_LOOP_CONTROL=true in .env to run or pause the loop from here. The commands below still work.</p>
+<div class="controls" id="controls" hidden><button type="button" class="act" id="act-run" data-action="run">Run next fire</button><button type="button" class="act" id="act-pause" data-action="pause">Pause loop</button></div>
+<div class="act-result" id="act-result" role="status" aria-live="polite"></div>
+</section>
+<section id="fires" aria-labelledby="h-fires">
+<h2 id="h-fires">Fires</h2>
+<div id="strip"></div>
+<p class="hint scroll-cue" id="fires-scroll" hidden>The table scrolls sideways: the result, goals and transcript columns are to the right.</p>
+<div class="tablewrap"><table id="fire-table">
+<caption class="sr">The latest fires of the loop, newest first</caption>
+<thead><tr><th scope="col">fire</th><th scope="col">began (UTC)</th><th scope="col">duration</th><th scope="col">result</th><th scope="col">goals</th><th scope="col">transcript</th></tr></thead>
+<tbody></tbody>
+</table></div>
+</section>
+<section id="fleet" aria-labelledby="h-fleet">
+<h2 id="h-fleet">Fleet</h2>
+<p class="hint">Who runs what: the operator, the agent's terminal sessions (tmux) and the autonomy loop - the hub - with its latest fires and the sub-agents each fire spawned. The services beside the agent follow with their probe state.</p>
+<div id="tree"></div>
+<h3>Services</h3>
+<ul class="services" id="services"></ul>
+</section>
+<section id="commands" aria-labelledby="h-commands">
+<h2 id="h-commands">Commands</h2>
+<p class="hint">Copy and run them on the host (or in any shell that reaches the container). Nothing here is sent anywhere by the page.</p>
+<ul class="cmds" id="cmds"></ul>
+</section>
+</main>
+<footer id="footer"></footer>
+<noscript><!--SNAPSHOT--></noscript>
+</body>
+</html>

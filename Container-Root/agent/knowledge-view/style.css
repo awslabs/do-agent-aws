@@ -1,0 +1,12 @@
+/* Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. */
+/* SPDX-License-Identifier: Apache-2.0 */
+/* The Knowledge page's own layout, on the harness tokens (docs/UI-STYLE.md); its look is harness.css */
+main.hs-wrap { display: grid; gap: var(--hs-space-3); padding-top: var(--hs-space-3); padding-bottom: var(--hs-space-4); }
+.fields { display: flex; flex-wrap: wrap; gap: var(--hs-space-2) var(--hs-space-3); margin: var(--hs-space-2) 0; }
+.fields label { display: grid; gap: var(--hs-space-1); font-size: 13px; color: var(--hs-muted); }
+.result { margin-top: var(--hs-space-2); }
+.result ul, #kept { margin: var(--hs-space-1) 0; padding-left: var(--hs-space-4); }
+.fields > button { align-self: flex-end; }
+#found td[data-label="Id"] { overflow-wrap: anywhere; }
+.check { display: flex; align-items: center; gap: var(--hs-space-1); margin: var(--hs-space-2) 0; font-size: 13px; }
+.result li.warn { font-weight: 600; }

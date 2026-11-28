@@ -1,0 +1,77 @@
+diff --git a/packages/web-core/src/i18n/locales/en/settings.json b/packages/web-core/src/i18n/locales/en/settings.json
+index 4e631b8..8519184 100644
+--- a/packages/web-core/src/i18n/locales/en/settings.json
++++ b/packages/web-core/src/i18n/locales/en/settings.json
+@@ -39,8 +39,9 @@
+       "thisMachine": "This machine",
+       "localHost": "Local host",
+       "remoteHost": "Remote host",
+-      "noHostAvailable": "No host is available for host-specific settings yet.",
+-      "pairMachineHint": "Pair a machine to open machine settings.",
++      "noHostAvailable": "No vibe-kanban host is linked to this board, so machine settings are not available here. This harness's coding agents and MCP servers are set in its agent runner: open the Agent workspaces tile on the harness home page, then the runner's Settings (Agents, MCP Servers).",
++      "pairMachineHint": "No host is linked to this board: agents and MCP servers are set in the agent runner's Settings (the Agent workspaces tile).",
++      "openAgentRunner": "Open the agent runner",
+       "selectMachineHint": "Select a machine to open machine settings."
+     },
+     "general": {
+diff --git a/packages/web-core/src/shared/dialogs/settings/SettingsDialog.tsx b/packages/web-core/src/shared/dialogs/settings/SettingsDialog.tsx
+index e123454..e1f5f21 100644
+--- a/packages/web-core/src/shared/dialogs/settings/SettingsDialog.tsx
++++ b/packages/web-core/src/shared/dialogs/settings/SettingsDialog.tsx
+@@ -350,6 +350,18 @@ function SettingsDialogContent({
+                 ) : (
+                   <div className="px-6 py-8 text-sm text-low">
+                     {t('settings.hostPicker.noHostAvailable')}
++                    {/* do-agent-aws Goals board (kanban/patches/0004): the runner is the same harness port on vk-runner. */}
++                    {window.location.hostname.startsWith('kanban.') && (
++                      <a
++                        className="mt-3 block text-brand underline"
++                        href={`${window.location.protocol}//vk-runner.${window.location.host.slice('kanban.'.length)}/workspaces`}
++                        target="_blank"
++                        rel="noopener noreferrer"
++                        data-testid="open-agent-runner"
++                      >
++                        {t('settings.hostPicker.openAgentRunner')}
++                      </a>
++                    )}
+                   </div>
+                 )
+               ) : (
+diff --git a/packages/web-core/src/shared/dialogs/settings/settings/SettingsHostContext.tsx b/packages/web-core/src/shared/dialogs/settings/settings/SettingsHostContext.tsx
+index c90d387..7439150 100644
+--- a/packages/web-core/src/shared/dialogs/settings/settings/SettingsHostContext.tsx
++++ b/packages/web-core/src/shared/dialogs/settings/settings/SettingsHostContext.tsx
+@@ -122,6 +122,14 @@ export function SettingsHostProvider({
+       enabled: runtime === 'remote' && isSignedIn,
+       staleTime: 5_000,
+     });
++  // do-agent-aws Goals board (kanban/patches/0004): the host lookup is bounded. A board with no linked host answered
++  // "Loading settings..." for as long as the lookup hung; after 8 s it counts as resolved, and the dialog says how
++  // this harness's agents are configured instead
++  const [hostLookupTimedOut, setHostLookupTimedOut] = useState(false);
++  useEffect(() => {
++    const timer = setTimeout(() => setHostLookupTimedOut(true), 8000);
++    return () => clearTimeout(timer);
++  }, []);
+   const hostsResolved = useMemo(() => {
+     if (runtime === 'local') {
+       return true;
+@@ -131,8 +139,16 @@ export function SettingsHostProvider({
+       return true;
+     }
+ 
+-    return !relayHostsLoading && !pairedRelayHostsLoading;
+-  }, [isSignedIn, pairedRelayHostsLoading, relayHostsLoading, runtime]);
++    return (
++      hostLookupTimedOut || (!relayHostsLoading && !pairedRelayHostsLoading)
++    );
++  }, [
++    hostLookupTimedOut,
++    isSignedIn,
++    pairedRelayHostsLoading,
++    relayHostsLoading,
++    runtime,
++  ]);
+ 
+   const availableHosts = useMemo<SettingsHostTarget[]>(() => {
+     if (runtime === 'local') {

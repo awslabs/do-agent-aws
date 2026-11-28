@@ -1,0 +1,11 @@
+# state and secrets the runtime writes or you create — never commit them
+dashboard/
+scratch/
+scripts/redact-denylist.conf
+.claude/hooks/gh-write-audit.log
+dashboard/gh-write-audit.log
+.claude/settings.local.json
+__pycache__/
+*.pyc
+*.local.conf
+*.local.sh

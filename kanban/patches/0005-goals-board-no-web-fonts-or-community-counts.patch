@@ -1,0 +1,122 @@
+diff --git a/packages/local-web/tailwind.new.config.js b/packages/local-web/tailwind.new.config.js
+index 4f7a10c..0514714 100644
+--- a/packages/local-web/tailwind.new.config.js
++++ b/packages/local-web/tailwind.new.config.js
+@@ -137,8 +137,8 @@ module.exports = {
+         half: getSize('base', 0.5),
+       },
+       fontFamily: {
+-        'ibm-plex-sans': ['"IBM Plex Sans"', '"Noto Emoji"', 'sans-serif'],
+-        'ibm-plex-mono': ['"IBM Plex Mono"', 'monospace'],
++        'ibm-plex-sans': ['"IBM Plex Sans"', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', '"Noto Emoji"', 'sans-serif'],
++        'ibm-plex-mono': ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+       },
+       keyframes: {
+         "accordion-down": {
+diff --git a/packages/web-core/src/app/styles/new/index.css b/packages/web-core/src/app/styles/new/index.css
+index 1389891..32f7f69 100644
+--- a/packages/web-core/src/app/styles/new/index.css
++++ b/packages/web-core/src/app/styles/new/index.css
+@@ -1,4 +1,5 @@
+-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&family=IBM+Plex+Mono:ital,wght@0,100..700;1,100..700&family=Noto+Emoji:wght@300..700&family=Roboto:wght@500&display=swap');
++/* do-agent-aws Goals board (kanban/patches/0005): no web font from Google Fonts - IBM Plex when it is installed
++   locally, else the system stack */
+ 
+ @tailwind base;
+ @tailwind components;
+diff --git a/packages/web-core/src/shared/hooks/useDiscordOnlineCount.ts b/packages/web-core/src/shared/hooks/useDiscordOnlineCount.ts
+index 7bd3e91..be04493 100644
+--- a/packages/web-core/src/shared/hooks/useDiscordOnlineCount.ts
++++ b/packages/web-core/src/shared/hooks/useDiscordOnlineCount.ts
+@@ -1,39 +1,11 @@
+ import { useQuery } from '@tanstack/react-query';
+ 
+-const DISCORD_GUILD_ID = '1423630976524877857';
+-
+-async function fetchDiscordOnlineCount(): Promise<number | null> {
+-  try {
+-    const res = await fetch(
+-      `https://discord.com/api/guilds/${DISCORD_GUILD_ID}/widget.json`,
+-      { cache: 'no-store' }
+-    );
+-
+-    if (!res.ok) {
+-      console.warn(`Discord API error: ${res.status}`);
+-      return null;
+-    }
+-
+-    const data = await res.json();
+-    if (typeof data?.presence_count === 'number') {
+-      return data.presence_count;
+-    }
+-
+-    return null;
+-  } catch (error) {
+-    console.warn('Failed to fetch Discord online count:', error);
+-    return null;
+-  }
+-}
+-
++// do-agent-aws Goals board (kanban/patches/0005): no call to Discord's API for an online count - the query never runs
++// and has no URL to call
+ export function useDiscordOnlineCount() {
+-  return useQuery({
++  return useQuery<number | null>({
+     queryKey: ['discord-online-count'],
+-    queryFn: fetchDiscordOnlineCount,
+-    refetchInterval: 10 * 60 * 1000,
+-    staleTime: 10 * 60 * 1000,
+-    retry: false,
+-    refetchOnMount: false,
+-    placeholderData: (previousData) => previousData,
++    queryFn: async () => null,
++    enabled: false,
+   });
+ }
+diff --git a/packages/web-core/src/shared/hooks/useGitHubStars.ts b/packages/web-core/src/shared/hooks/useGitHubStars.ts
+index 34b32d3..f8edad7 100644
+--- a/packages/web-core/src/shared/hooks/useGitHubStars.ts
++++ b/packages/web-core/src/shared/hooks/useGitHubStars.ts
+@@ -1,37 +1,11 @@
+ import { useQuery } from '@tanstack/react-query';
+ 
+-async function fetchGitHubStars(): Promise<number | null> {
+-  try {
+-    const res = await fetch(
+-      'https://api.github.com/repos/BloopAI/vibe-kanban',
+-      { cache: 'no-store' }
+-    );
+-
+-    if (!res.ok) {
+-      console.warn(`GitHub API error: ${res.status}`);
+-      return null;
+-    }
+-
+-    const data = await res.json();
+-    if (typeof data?.stargazers_count === 'number') {
+-      return data.stargazers_count;
+-    }
+-
+-    return null;
+-  } catch (error) {
+-    console.warn('Failed to fetch GitHub stars:', error);
+-    return null;
+-  }
+-}
+-
++// do-agent-aws Goals board (kanban/patches/0005): no call to GitHub's API for a star count - the query never runs
++// and has no URL to call
+ export function useGitHubStars() {
+-  return useQuery({
++  return useQuery<number | null>({
+     queryKey: ['github-stars'],
+-    queryFn: fetchGitHubStars,
+-    refetchInterval: 10 * 60 * 1000,
+-    staleTime: 10 * 60 * 1000,
+-    retry: false,
+-    refetchOnMount: false,
+-    placeholderData: (previousData) => previousData,
++    queryFn: async () => null,
++    enabled: false,
+   });
+ }

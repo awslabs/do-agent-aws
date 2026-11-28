@@ -1,0 +1,33 @@
+# Runtime state
+wd/
+/goals/
+/loop/
+/ui/
+/slack/
+scratch/
+.omc/
+
+# Build and render outputs
+/kanban/src/
+/to/sandbox/app/
+/to/compose/app/
+/to/kubernetes/app/
+__pycache__/
+/cve/
+tools/fresh-deploy-proof/evidence*/
+tools/fresh-deploy-proof/*.bundle
+tools/fresh-deploy-proof/*.log
+
+# Security scan outputs
+.ash/
+ash_output/
+.ash_output/
+*.sarif
+gl-*-report.json
+.secrets.baseline
+licenses.txt
+licenses.csv
+
+# Local settings
+/.env.local
+/.env.edited-*

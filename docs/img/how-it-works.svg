@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560" role="img" aria-labelledby="hiw-title hiw-desc">
+  <title id="hiw-title">How Do Agent on AWS works</title>
+  <desc id="hiw-desc">You reach the agent container's home page in a browser on 127.0.0.1:8000, its only published port. Slack, Telegram
+    and email reach its channels. Inside the container: the home page and reverse proxy in front of every UI, memory and
+    learning, the channels, the autonomy loop (headless Claude Code, one cycle per fire, calling Amazon Bedrock with your AWS
+    credentials), the Docker agent and the supervisor with its spoke agents. Beside it, on the same host and private
+    networks: the Goals board (vibe-kanban server, PostgreSQL, Electric), the build substrate (rootless BuildKit and a
+    private registry) and, optionally and off by default, the Plane project board.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#57606a"/>
+    </marker>
+    <style>
+      .card { fill: #ffffff; stroke: #8c959f; stroke-width: 1.2; }
+      .host { fill: #f6f8fa; stroke: #57606a; stroke-width: 1.5; }
+      .ext { fill: #ddf4ff; stroke: #0969da; stroke-width: 1.2; }
+      .side { fill: #ffffff; stroke: #8c959f; stroke-width: 1.2; }
+      .opt { fill: #ffffff; stroke: #8c959f; stroke-width: 1.2; stroke-dasharray: 6 4; }
+      .wire { stroke: #57606a; stroke-width: 1.6; fill: none; }
+      .h { font: 600 14.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+      .hh { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+      .s { font: 400 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #57606a; }
+      .lbl { font: 400 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #57606a; }
+    </style>
+  </defs>
+
+  <!-- a light card behind everything, so the diagram reads the same on a light or a dark page -->
+  <rect x="0.5" y="0.5" width="959" height="559" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+
+  <!-- who talks to it -->
+  <rect class="ext" x="16" y="86" width="192" height="78" rx="8"/>
+  <text class="h" x="30" y="112">You, in a browser</text>
+  <text class="s" x="30" y="132">http://localhost:8000,</text>
+  <text class="s" x="30" y="150">over ssh -L 8000 if remote</text>
+
+  <rect class="ext" x="16" y="186" width="192" height="78" rx="8"/>
+  <text class="h" x="30" y="212">Slack, Telegram, email</text>
+  <text class="s" x="30" y="232">messages in, answers out;</text>
+  <text class="s" x="30" y="250">posting is gated</text>
+
+  <!-- the agent container -->
+  <rect class="host" x="240" y="24" width="484" height="352" rx="10"/>
+  <text class="hh" x="256" y="52">Agent container (do-agent-aws)</text>
+  <text class="s" x="256" y="70">its home port, 127.0.0.1:8000, is the only port published</text>
+
+  <rect class="card" x="256" y="86" width="218" height="78" rx="8"/>
+  <text class="h" x="270" y="112">Home page and reverse proxy</text>
+  <text class="s" x="270" y="132">Guide, terminal, Memory, Goals</text>
+  <text class="s" x="270" y="150">board, Conversations, Files ...</text>
+
+  <rect class="card" x="490" y="86" width="218" height="78" rx="8"/>
+  <text class="h" x="504" y="112">Memory and learning</text>
+  <text class="s" x="504" y="132">Hindsight memory store; LogLearner</text>
+  <text class="s" x="504" y="150">rules in every tool call</text>
+
+  <rect class="card" x="256" y="186" width="218" height="78" rx="8"/>
+  <text class="h" x="270" y="212">Channels</text>
+  <text class="s" x="270" y="232">Slack watch and chat,</text>
+  <text class="s" x="270" y="250">the comms engine</text>
+
+  <rect class="card" x="490" y="186" width="218" height="78" rx="8"/>
+  <text class="h" x="504" y="212">Autonomy loop</text>
+  <text class="s" x="504" y="232">headless Claude Code, one cycle</text>
+  <text class="s" x="504" y="250">per fire, on your goals</text>
+
+  <rect class="card" x="256" y="286" width="218" height="74" rx="8"/>
+  <text class="h" x="270" y="312">Docker agent</text>
+  <text class="s" x="270" y="332">builds images through</text>
+  <text class="s" x="270" y="350">the build substrate</text>
+
+  <rect class="card" x="490" y="286" width="218" height="74" rx="8"/>
+  <text class="h" x="504" y="312">Supervisor and spoke agents</text>
+  <text class="s" x="504" y="332">focused agents beside the hub</text>
+  <text class="s" x="504" y="350">agent, each with its own charter</text>
+
+  <!-- what it calls -->
+  <rect class="ext" x="760" y="186" width="184" height="78" rx="8"/>
+  <text class="h" x="774" y="212">Amazon Bedrock</text>
+  <text class="s" x="774" y="232">Claude models, called with</text>
+  <text class="s" x="774" y="250">your AWS credentials</text>
+
+  <!-- the sidecars -->
+  <rect x="240" y="404" width="484" height="132" rx="10" fill="#fbfcfd" stroke="#8c959f" stroke-width="1.2"/>
+  <text class="h" x="256" y="430">Sidecar containers: same host, private networks</text>
+
+  <rect class="side" x="256" y="444" width="148" height="76" rx="8"/>
+  <text class="h" x="268" y="469">Goals board</text>
+  <text class="s" x="268" y="489">vibe-kanban server,</text>
+  <text class="s" x="268" y="507">PostgreSQL, Electric</text>
+
+  <rect class="side" x="408" y="444" width="148" height="76" rx="8"/>
+  <text class="h" x="420" y="469">Build substrate</text>
+  <text class="s" x="420" y="489">rootless BuildKit,</text>
+  <text class="s" x="420" y="507">private registry</text>
+
+  <rect class="opt" x="560" y="444" width="148" height="76" rx="8"/>
+  <text class="h" x="572" y="469">Plane board</text>
+  <text class="s" x="572" y="489">optional, AGPL-3.0,</text>
+  <text class="s" x="572" y="507">off by default</text>
+
+  <!-- connections -->
+  <line class="wire" x1="208" y1="125" x2="254" y2="125" marker-end="url(#arrow)"/>
+  <text class="lbl" x="214" y="117">HTTP</text>
+  <line class="wire" x1="208" y1="225" x2="254" y2="225" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <line class="wire" x1="708" y1="225" x2="758" y2="225" marker-end="url(#arrow)"/>
+  <text class="lbl" x="714" y="217">HTTPS</text>
+  <line class="wire" x1="482" y1="376" x2="482" y2="402" marker-end="url(#arrow)"/>
+</svg>

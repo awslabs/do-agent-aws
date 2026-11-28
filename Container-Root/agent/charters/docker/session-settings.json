@@ -1,0 +1,17 @@
+{
+ "permissions": {
+  "deny": [
+   "Bash(buildctl:*)",
+   "Bash(/usr/local/bin/buildctl:*)",
+   "Bash(crane:*)",
+   "Bash(/usr/local/bin/crane:*)",
+   "Bash(tmux show-environment:*)",
+   "Bash(tmux showenv:*)",
+   "Read(//proc/**)",
+   "Read(~/.docker/**)",
+   "Edit(/{WORKDIR}/.claude/**)",
+   "Edit(/{WORKDIR}/.docker-config/**)",
+   "Edit(/{CHARTER_DIR}/**)"
+  ]
+ }
+}
